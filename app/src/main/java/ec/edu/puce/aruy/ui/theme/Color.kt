@@ -1,4 +1,4 @@
-package com.example.aruy.ui.theme
+package ec.edu.puce.aruy.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

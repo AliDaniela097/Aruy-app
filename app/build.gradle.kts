@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.aruy"
+    namespace = "ec.edu.puce.aruy"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.aruy"
+        applicationId = "ec.edu.puce.aruy"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
@@ -56,4 +56,7 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation("com.google.mlkit:image-labeling:17.0.9")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 }
