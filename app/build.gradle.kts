@@ -5,13 +5,15 @@ plugins {
 }
 
 android {
+    // Bloqueamos a la API 36 definida para el curso
     namespace = "ec.edu.puce.aruy"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
+        // MinSdk 26 asegura compatibilidad con el 90% del mercado actual
         applicationId = "ec.edu.puce.aruy"
-        minSdk = 24
-        targetSdk = 34
+        minSdk = 26
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -28,11 +30,12 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        // Forzamos Java 21 para evitar errores de bytecode
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "21"
     }
     buildFeatures {
         compose = true
