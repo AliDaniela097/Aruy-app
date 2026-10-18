@@ -1,11 +1,8 @@
 # Aruy
 
-App móvil Android (Kotlin + Jetpack Compose) que conecta a trabajadores
-independientes de oficios en Quito con personas que buscan servicios
+Aruy conecta a trabajadores independientes de oficios en Quito que
+necesitan conseguir más clientes con personas que buscan servicios
 confiables, rápidos y sin intermediarios.
-
-Proyecto de los cursos Programación Móvil y Emprendimiento Tecnológico
-(PUCE).
 
 ## Equipo FrameFlow
 
@@ -22,6 +19,11 @@ Proyecto de los cursos Programación Móvil y Emprendimiento Tecnológico
 - Retrofit con la Data API de Neon (backend)
 - ML Kit Image Labeling (IA en el dispositivo)
 - Corrutinas de Kotlin
+
+## Flujo de trabajo
+
+El desarrollo se hace en la rama `develop`. La rama `main` se usa solo
+cuando el proyecto esté listo para publicarse en Google Play Store.
 
 ## Licencia
 
