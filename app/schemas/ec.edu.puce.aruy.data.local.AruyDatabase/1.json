@@ -1,0 +1,40 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "db94b5128a0dabe72ef0745185f00334",
+    "entities": [
+      {
+        "tableName": "favoritos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`servicioId` TEXT NOT NULL, `fechaGuardado` INTEGER NOT NULL, PRIMARY KEY(`servicioId`))",
+        "fields": [
+          {
+            "fieldPath": "servicioId",
+            "columnName": "servicioId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fechaGuardado",
+            "columnName": "fechaGuardado",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "servicioId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'db94b5128a0dabe72ef0745185f00334')"
+    ]
+  }
+}

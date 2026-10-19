@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -42,6 +43,10 @@ android {
     }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
 
     implementation(libs.androidx.core.ktx)
@@ -62,4 +67,13 @@ dependencies {
     implementation("com.google.mlkit:image-labeling:17.0.9")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation(libs.androidx.room.runtime) // Room: persistencia local
+    ksp(libs.androidx.room.compiler) // KSP: procesamiento de anotaciones de Room
+    implementation(libs.androidx.room.runtime) // Room: base de datos local
+    implementation(libs.androidx.room.ktx) // Soporte para corrutinas y Flow
+    ksp(libs.androidx.room.compiler) // Procesador de anotaciones
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation(libs.retrofit.core) // Retrofit: comunicación con API REST
+    implementation(libs.retrofit.gson) // Gson: conversión de JSON a objetos Kotlin
+    implementation(libs.okhttp.logging) // OkHttp: registro de solicitudes HTTP
 }
