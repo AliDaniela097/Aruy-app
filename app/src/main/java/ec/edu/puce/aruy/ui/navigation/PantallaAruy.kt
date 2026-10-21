@@ -5,6 +5,11 @@ sealed class PantallaAruy(
     val titulo: String
 ) {
 
+    data object Servicios : PantallaAruy(
+        ruta = "servicios",
+        titulo = "Servicios"
+    )
+
     data object Favoritos : PantallaAruy(
         ruta = "favoritos",
         titulo = "Favoritos"

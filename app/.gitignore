@@ -1,1 +1,7 @@
-/build
+# Gradle
+.gradle/
+**/build/
+
+# Archivos temporales
+*.log
+*.tmp

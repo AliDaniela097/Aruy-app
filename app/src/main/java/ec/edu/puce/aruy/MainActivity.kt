@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -25,21 +24,20 @@ import ec.edu.puce.aruy.data.remote.RetrofitClient
 import ec.edu.puce.aruy.data.repository.UsuarioRepository
 import ec.edu.puce.aruy.ui.viewmodel.UsuarioViewModel
 import ec.edu.puce.aruy.ui.viewmodel.UsuarioViewModelFactory
-
-
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Text
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
 import ec.edu.puce.aruy.ui.screen.UsuarioScreen
-
 import ec.edu.puce.aruy.ui.navigation.PantallaAruy
+
+import ec.edu.puce.aruy.data.repository.ServicioRepository
+import ec.edu.puce.aruy.ui.screen.ServiciosScreen
+import ec.edu.puce.aruy.ui.viewmodel.ServicioViewModel
+import ec.edu.puce.aruy.ui.viewmodel.ServicioViewModelFactory
+
 
 class MainActivity : ComponentActivity() {
 
@@ -58,6 +56,16 @@ class MainActivity : ComponentActivity() {
                 val repository = remember(database) {
                     FavoritoRepository(database.favoritoDao())
                 }
+
+                val servicioRepository = remember {
+                    ServicioRepository(RetrofitClient.servicioApi)
+                }
+
+                val servicioViewModel: ServicioViewModel = viewModel(
+                    factory = remember(servicioRepository) {
+                        ServicioViewModelFactory(servicioRepository)
+                    }
+                )
 
                 val favoritoViewModel: FavoritoViewModel = viewModel(
                     factory = object : ViewModelProvider.Factory {
@@ -81,12 +89,26 @@ class MainActivity : ComponentActivity() {
                 )
 
                 var pantallaActual by rememberSaveable {
-                    mutableStateOf(PantallaAruy.Favoritos.ruta)
+                    mutableStateOf(PantallaAruy.Servicios.ruta)
                 }
 
                 Scaffold(
                     bottomBar = {
+
                         NavigationBar {
+
+                            NavigationBarItem(
+                                selected = pantallaActual == PantallaAruy.Servicios.ruta,
+                                onClick = {
+                                    pantallaActual = PantallaAruy.Servicios.ruta
+                                },
+                                icon = {
+                                    Text("▦")
+                                },
+                                label = {
+                                    Text(PantallaAruy.Servicios.titulo)
+                                }
+                            )
 
                             NavigationBarItem(
                                 selected = pantallaActual == PantallaAruy.Favoritos.ruta,
@@ -122,6 +144,10 @@ class MainActivity : ComponentActivity() {
                     ) {
 
                         when (pantallaActual) {
+
+                            PantallaAruy.Servicios.ruta -> {
+                                ServiciosScreen(servicioViewModel)
+                            }
 
                             PantallaAruy.Favoritos.ruta -> {
                                 FavoritosScreen(favoritoViewModel)

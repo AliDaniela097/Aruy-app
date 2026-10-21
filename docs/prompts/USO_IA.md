@@ -91,3 +91,4 @@ Comienza con la Fase 1:
 - Configurar Version Catalog (libs.versions.toml).
 - Agregar Room, Hilt, Navigation y Coroutines.
 - Explicar cada dependencia detalladamente.
+
