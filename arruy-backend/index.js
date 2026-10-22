@@ -7,6 +7,7 @@ app.use(express.json());
 app.get('/health', (req, res) => res.json({ estado: 'ok' }));
 app.use('/servicios', require('./routes/servicios'));
 app.use('/usuarios', require('./routes/usuarios'));
+app.use('/fotos', require('./routes/fotos'));
 
 app.use((req, res) => res.status(404).json({ error: 'Ruta no encontrada' }));
 
