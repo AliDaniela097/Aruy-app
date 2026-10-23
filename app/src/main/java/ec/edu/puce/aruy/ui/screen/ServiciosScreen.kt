@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -25,13 +26,26 @@ fun ServiciosScreen(
     viewModel: ServicioViewModel
 ) {
     val estado by viewModel.estadoServicios.collectAsState()
+    val nombresPrestadores by viewModel.nombresPrestadores.collectAsState()
 
-    ServiciosContenido(estado = estado)
+    LaunchedEffect(Unit) {
+        if (viewModel.estadoServicios.value is EstadoApi.Inactivo) {
+            viewModel.obtenerServicios()
+        }
+    }
+
+    ServiciosContenido(
+        estado = estado,
+        nombresPrestadores = nombresPrestadores,
+        onReintentar = { viewModel.obtenerServicios() }
+    )
 }
 
 @Composable
 fun ServiciosContenido(
-    estado: EstadoApi<List<Servicio>>
+    estado: EstadoApi<List<Servicio>>,
+    nombresPrestadores: Map<String, String> = emptyMap(),
+    onReintentar: () -> Unit = {}
 ) {
     when (estado) {
 
@@ -129,7 +143,10 @@ fun ServiciosContenido(
                             items = serviciosFiltrados,
                             key = { it.id }
                         ) { servicio ->
-                            ServicioItem(servicio)
+                            ServicioItem(
+                                servicio = servicio,
+                                nombrePrestador = nombresPrestadores[servicio.prestadorId]
+                            )
                         }
                     }
                 }
@@ -137,7 +154,21 @@ fun ServiciosContenido(
         }
 
         is EstadoApi.Error -> {
-            EstadoServiciosMensaje(estado.mensaje)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(estado.mensaje)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(onClick = onReintentar) {
+                    Text("Reintentar")
+                }
+            }
         }
     }
 }
@@ -158,7 +189,8 @@ private fun EstadoServiciosMensaje(
 
 @Composable
 private fun ServicioItem(
-    servicio: Servicio
+    servicio: Servicio,
+    nombrePrestador: String?
 ) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -175,6 +207,12 @@ private fun ServicioItem(
             Text(
                 text = servicio.descripcion
             )
+
+            if (nombrePrestador != null) {
+                Text(
+                    text = "Prestador: $nombrePrestador"
+                )
+            }
 
             Text(
                 text = "Categoría: ${servicio.categoria}"

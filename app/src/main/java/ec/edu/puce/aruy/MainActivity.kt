@@ -27,6 +27,8 @@ import ec.edu.puce.aruy.ui.viewmodel.UsuarioViewModelFactory
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
+import ec.edu.puce.aruy.domain.model.EstadoApi
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -61,12 +63,6 @@ class MainActivity : ComponentActivity() {
                     ServicioRepository(RetrofitClient.servicioApi)
                 }
 
-                val servicioViewModel: ServicioViewModel = viewModel(
-                    factory = remember(servicioRepository) {
-                        ServicioViewModelFactory(servicioRepository)
-                    }
-                )
-
                 val favoritoViewModel: FavoritoViewModel = viewModel(
                     factory = object : ViewModelProvider.Factory {
                         @Suppress("UNCHECKED_CAST")
@@ -87,6 +83,20 @@ class MainActivity : ComponentActivity() {
                         UsuarioViewModelFactory(usuarioRepository)
                     }
                 )
+
+                val servicioViewModel: ServicioViewModel = viewModel(
+                    factory = remember(servicioRepository, usuarioRepository) {
+                        ServicioViewModelFactory(
+                            servicioRepository,
+                            usuarioRepository
+                        )
+                    }
+                )
+
+                // Aún no hay inicio de sesión: se muestra el prestador del primer servicio
+                val estadoServicios by servicioViewModel.estadoServicios.collectAsState()
+                val usuarioIdPerfil = (estadoServicios as? EstadoApi.Exito)
+                    ?.datos?.firstOrNull()?.prestadorId
 
                 var pantallaActual by rememberSaveable {
                     mutableStateOf(PantallaAruy.Servicios.ruta)
@@ -154,7 +164,7 @@ class MainActivity : ComponentActivity() {
                             }
 
                             PantallaAruy.Usuario.ruta -> {
-                                UsuarioScreen(usuarioViewModel)
+                                UsuarioScreen(usuarioViewModel, usuarioIdPerfil)
                             }
                         }
                     }
