@@ -10,7 +10,8 @@ fun ServicioDto.toDomain(): Servicio {
         prestadorId = prestadorId,
         titulo = titulo,
         descripcion = descripcion,
-        categoria = CategoriaServicio.valueOf(categoria),
+        categoria = runCatching { CategoriaServicio.valueOf(categoria) }
+            .getOrDefault(CategoriaServicio.OTROS),
         precioReferencial = precioReferencial,
         disponible = disponible
     )
