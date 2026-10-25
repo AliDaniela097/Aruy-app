@@ -45,6 +45,10 @@ android {
         compose = true
         buildConfig = true
     }
+
+    buildFeatures {
+        buildConfig = true
+    }
 }
 
 ksp {
