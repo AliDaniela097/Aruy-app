@@ -2,11 +2,16 @@ package ec.edu.puce.aruy.data.remote.util
 
 import retrofit2.HttpException
 import java.io.IOException
+import java.net.SocketTimeoutException
 
 object ApiErrorHandler {
 
     fun obtenerMensaje(error: Exception): String {
         return when (error) {
+
+            is SocketTimeoutException -> {
+                "El servidor tardó demasiado en responder. Inténtalo nuevamente."
+            }
 
             is IOException -> {
                 "No se pudo conectar con el servidor. Verifica tu conexión a internet."

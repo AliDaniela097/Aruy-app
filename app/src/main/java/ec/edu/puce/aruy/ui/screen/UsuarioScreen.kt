@@ -3,6 +3,7 @@ package ec.edu.puce.aruy.ui.screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -14,16 +15,29 @@ import ec.edu.puce.aruy.ui.viewmodel.UsuarioViewModel
 
 @Composable
 fun UsuarioScreen(
-    viewModel: UsuarioViewModel
+    viewModel: UsuarioViewModel,
+    usuarioId: String?
 ) {
     val estado by viewModel.estadoUsuario.collectAsState()
 
-    UsuarioContenido(estado = estado)
+    LaunchedEffect(usuarioId) {
+        if (usuarioId != null) {
+            viewModel.obtenerUsuario(usuarioId)
+        }
+    }
+
+    UsuarioContenido(
+        estado = estado,
+        onReintentar = {
+            if (usuarioId != null) viewModel.obtenerUsuario(usuarioId)
+        }
+    )
 }
 
 @Composable
 fun UsuarioContenido(
-    estado: EstadoApi<Usuario>
+    estado: EstadoApi<Usuario>,
+    onReintentar: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -35,7 +49,7 @@ fun UsuarioContenido(
         when (estado) {
 
             is EstadoApi.Inactivo -> {
-                Text("Todavía no se ha consultado ningún usuario.")
+                Text("Aún no hay un usuario para mostrar.")
             }
 
             is EstadoApi.Cargando -> {
@@ -71,6 +85,12 @@ fun UsuarioContenido(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(estado.mensaje)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(onClick = onReintentar) {
+                    Text("Reintentar")
+                }
             }
         }
     }

@@ -10,9 +10,11 @@ fun UsuarioDto.toDomain(): Usuario {
         id = id,
         nombre = nombre,
         telefono = telefono,
-        rol = RolUsuario.valueOf(rol),
-        estadoVerificacion =
-        EstadoVerificacion.valueOf(estadoVerificacion),
+        rol = runCatching { RolUsuario.valueOf(rol) }
+            .getOrDefault(RolUsuario.CONTRATANTE),
+        estadoVerificacion = runCatching {
+            EstadoVerificacion.valueOf(estadoVerificacion)
+        }.getOrDefault(EstadoVerificacion.NO_SOLICITADA),
         fotoPerfil = fotoPerfil,
         activo = activo
     )
