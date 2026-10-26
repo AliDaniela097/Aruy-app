@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
+const { exigirToken, exigirRol } = require('../middleware/auth');
 const { esUuid, textoValido, limpiarEtiquetas, CATEGORIAS } = require('../validar');
 
 const router = express.Router();
@@ -15,6 +16,8 @@ function aServicio(f) {
     precio_referencial: f.precio_referencial === null ? null : Number(f.precio_referencial),
   };
 }
+
+// ---- Lecturas: publicas (el catalogo lo puede ver cualquiera) ----
 
 router.get('/', async (req, res) => {
   const { prestador_id } = req.query;
@@ -69,11 +72,13 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+// ---- Escritura: solo un PRESTADOR con sesion iniciada ----
+
+router.post('/', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
   const b = req.body || {};
   const fotos = b.fotos === undefined ? [] : b.fotos;
+  // El prestador sale del token, nunca del cuerpo de la peticion
 
-  if (!esUuid(b.prestador_id)) return res.status(400).json({ error: 'prestador_id invalido' });
   if (!textoValido(b.titulo, 150)) return res.status(400).json({ error: 'titulo es obligatorio' });
   if (!textoValido(b.descripcion, 2000)) return res.status(400).json({ error: 'descripcion es obligatoria' });
   if (!CATEGORIAS.includes(b.categoria)) {
@@ -97,9 +102,12 @@ router.post('/', async (req, res) => {
 
   const client = await pool.connect();
   try {
-    const u = await client.query('SELECT rol FROM usuarios WHERE id = $1', [b.prestador_id]);
-    if (u.rows.length === 0) return res.status(404).json({ error: 'El prestador no existe' });
-    if (u.rows[0].rol !== 'PRESTADOR') return res.status(400).json({ error: 'El usuario no es PRESTADOR' });
+    // En la base, servicios.prestador_id apunta al PERFIL del prestador (perfiles_prestadores)
+    const perfil = await client.query('SELECT id FROM perfiles_prestadores WHERE usuario_id = $1', [req.usuario.id]);
+    if (perfil.rows.length === 0) {
+      return res.status(409).json({ error: 'Primero crea tu perfil de prestador (POST /perfiles)' });
+    }
+    const prestadorId = perfil.rows[0].id;
 
     await client.query('BEGIN');
     const servicioId = crypto.randomUUID();
@@ -107,7 +115,7 @@ router.post('/', async (req, res) => {
       `INSERT INTO servicios (id, prestador_id, titulo, descripcion, categoria, precio_referencial, disponible, fecha_publicacion)
        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
        RETURNING ${COLUMNAS}`,
-      [servicioId, b.prestador_id, b.titulo.trim(), b.descripcion.trim(), b.categoria, p ?? null, b.disponible ?? true]
+      [servicioId, prestadorId, b.titulo.trim(), b.descripcion.trim(), b.categoria, p ?? null, b.disponible ?? true]
     );
 
     const guardadas = [];
@@ -120,7 +128,7 @@ router.post('/', async (req, res) => {
         [fotoId, servicioId, f.ref, f.descripcion, i]
       );
       for (const et of f.etiquetas) {
-        await client.query('INSERT INTO etiquetas_fotos (id, foto_id, etiqueta) VALUES ($1, $2, $3)', [
+        await client.query('INSERT INTO etiquetas_fotos (id, foto_id, etiqueta) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [
           crypto.randomUUID(), fotoId, et,
         ]);
       }
