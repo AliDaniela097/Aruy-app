@@ -23,25 +23,41 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import ec.edu.puce.aruy.AppContainer
+import ec.edu.puce.aruy.domain.catalogo.FiltrosCatalogo
+import ec.edu.puce.aruy.domain.catalogo.OrdenCatalogo
+import ec.edu.puce.aruy.domain.model.CategoriaServicio
 import ec.edu.puce.aruy.domain.model.EstadoSesion
 import ec.edu.puce.aruy.domain.model.RolUsuario
 import ec.edu.puce.aruy.ui.components.EstadoVacio
-import ec.edu.puce.aruy.ui.screen.FavoritosScreen
+import ec.edu.puce.aruy.ui.components.HojaCuentaRequerida
 import ec.edu.puce.aruy.ui.screen.PerfilBasicoScreen
-import ec.edu.puce.aruy.ui.screen.ServiciosScreen
 import ec.edu.puce.aruy.ui.screen.auth.BienvenidaScreen
 import ec.edu.puce.aruy.ui.screen.auth.LoginScreen
 import ec.edu.puce.aruy.ui.screen.auth.RegistroScreen
 import ec.edu.puce.aruy.ui.screen.auth.SplashScreen
+import ec.edu.puce.aruy.ui.screen.catalogo.BloqueadosScreen
+import ec.edu.puce.aruy.ui.screen.catalogo.BuscarScreen
+import ec.edu.puce.aruy.ui.screen.catalogo.DetalleServicioScreen
+import ec.edu.puce.aruy.ui.screen.catalogo.GuardadosScreen
+import ec.edu.puce.aruy.ui.screen.catalogo.InicioScreen
+import ec.edu.puce.aruy.ui.screen.catalogo.MisReportesScreen
+import ec.edu.puce.aruy.ui.screen.catalogo.NormasScreen
+import ec.edu.puce.aruy.ui.screen.catalogo.PrestadorPublicoScreen
 import ec.edu.puce.aruy.ui.screen.sistema.AccesoDenegadoScreen
+import ec.edu.puce.aruy.ui.viewmodel.ActividadLocalViewModel
 import ec.edu.puce.aruy.ui.viewmodel.AuthViewModel
-import ec.edu.puce.aruy.ui.viewmodel.FavoritoViewModel
-import ec.edu.puce.aruy.ui.viewmodel.ServicioViewModel
+import ec.edu.puce.aruy.ui.viewmodel.BuscarViewModel
+import ec.edu.puce.aruy.ui.viewmodel.CatalogoViewModel
+import ec.edu.puce.aruy.ui.viewmodel.DetalleViewModel
+import ec.edu.puce.aruy.ui.viewmodel.PrestadorViewModel
+import ec.edu.puce.aruy.ui.viewmodel.fabricaVm
 
 /** null mientras no hay una persona identificada (cargando o sin sesión). */
 internal fun rolDe(estado: EstadoSesion): RolNavegacion? = when (estado) {
@@ -58,13 +74,13 @@ private fun NavController.irLimpio(ruta: String) = navigate(ruta) {
 
 /**
  * Estructura principal: NavHost con las guardas de `router.js` y barra inferior según el rol.
- * Las pantallas pendientes muestran un aviso hasta que se construyan en las próximas fases.
+ * Las pantallas del prestador muestran un aviso hasta que se construyan en las próximas fases.
  */
 @Composable
 fun AruyApp(contenedor: AppContainer) {
     val navController = rememberNavController()
     val entradaActual by navController.currentBackStackEntryAsState()
-    val rutaActual = entradaActual?.destination?.route
+    val rutaActual = Rutas.base(entradaActual?.destination?.route)
     val snackbarHostState = remember { SnackbarHostState() }
 
     val estadoSesion by contenedor.sesionManager.estado.collectAsState()
@@ -72,15 +88,18 @@ fun AruyApp(contenedor: AppContainer) {
     val items = remember(rol) { rol?.let(::itemsDeNavegacion).orEmpty() }
 
     val authViewModel: AuthViewModel = viewModel(factory = contenedor.authViewModelFactory)
-    val favoritoViewModel: FavoritoViewModel = viewModel(factory = contenedor.favoritoViewModelFactory)
-    val servicioViewModel: ServicioViewModel = viewModel(factory = contenedor.servicioViewModelFactory)
+    val catalogo: CatalogoViewModel = viewModel(factory = contenedor.catalogoViewModelFactory)
+    val buscar: BuscarViewModel = viewModel(factory = contenedor.buscarViewModelFactory)
+    val actividad: ActividadLocalViewModel = viewModel(factory = contenedor.actividadLocalViewModelFactory)
+
+    var mostrarHojaCuenta by remember { mutableStateOf(false) }
 
     // Reacciona a los cambios de sesión: entrar, cerrar sesión o vencimiento del token
     var sesionAnterior by remember { mutableStateOf(estadoSesion) }
     LaunchedEffect(estadoSesion) {
         val antes = sesionAnterior
         sesionAnterior = estadoSesion
-        val ruta = navController.currentDestination?.route
+        val ruta = Rutas.base(navController.currentDestination?.route)
         when {
             estadoSesion is EstadoSesion.Autenticada && ruta in Rutas.ENTRADA ->
                 navController.irLimpio(rutaInicial(rolDe(estadoSesion)!!))
@@ -92,6 +111,11 @@ fun AruyApp(contenedor: AppContainer) {
 
     val estadoActualizado by rememberUpdatedState(estadoSesion)
     val irAlInicio: () -> Unit = { rol?.let { navController.irLimpio(rutaInicial(it)) } }
+
+    /** Un invitado no entra al detalle: se le ofrece crear su cuenta (`router.js`, `flows.js`). */
+    val abrirServicio: (String) -> Unit = { id ->
+        if (rol == RolNavegacion.INVITADO) mostrarHojaCuenta = true else navController.navigate(Rutas.servicio(id))
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -162,21 +186,120 @@ fun AruyApp(contenedor: AppContainer) {
                 }
 
                 composable(Rutas.INICIO) {
-                    Protegida(Rutas.INICIO, rol, navController, irAlInicio) { ServiciosScreen(servicioViewModel) }
+                    Protegida(Rutas.INICIO, rol, navController, irAlInicio) {
+                        InicioScreen(
+                            catalogo = catalogo,
+                            actividad = actividad,
+                            nombre = (estadoSesion as? EstadoSesion.Autenticada)?.sesion?.usuario?.nombre,
+                            invitado = rol == RolNavegacion.INVITADO,
+                            onBuscar = { navController.navigate(Rutas.buscar(enfocar = true)) },
+                            onCategoria = { navController.navigate(Rutas.buscar(it)) },
+                            onVerTodos = { orden ->
+                                buscar.actualizar {
+                                    FiltrosCatalogo(soloDisponibles = orden == null, orden = orden ?: OrdenCatalogo.MEJOR_CALIFICACION)
+                                }
+                                navController.navigate(Rutas.buscar())
+                            },
+                            onServicio = abrirServicio,
+                            onCrearCuenta = { navController.navigate(Rutas.REGISTRO) }
+                        )
+                    }
                 }
-                composable(Rutas.BUSCAR) {
-                    Protegida(Rutas.BUSCAR, rol, navController, irAlInicio) { PantallaEnConstruccion("Buscar") }
+                composable(
+                    Rutas.PATRON_BUSCAR,
+                    arguments = listOf(
+                        navArgument("cat") { type = NavType.StringType; nullable = true; defaultValue = null },
+                        navArgument("foco") { type = NavType.BoolType; defaultValue = false }
+                    )
+                ) { entrada ->
+                    val categoria = entrada.arguments?.getString("cat")?.takeIf { it.isNotEmpty() }
+                    LaunchedEffect(categoria) {
+                        if (categoria != null) buscar.aplicarCategoria(runCatching { CategoriaServicio.valueOf(categoria) }.getOrNull())
+                    }
+                    Protegida(Rutas.BUSCAR, rol, navController, irAlInicio) {
+                        BuscarScreen(
+                            catalogo = catalogo,
+                            buscar = buscar,
+                            invitado = rol == RolNavegacion.INVITADO,
+                            enfocar = entrada.arguments?.getBoolean("foco") ?: false,
+                            onServicio = abrirServicio
+                        )
+                    }
                 }
                 composable(Rutas.GUARDADOS) {
-                    Protegida(Rutas.GUARDADOS, rol, navController, irAlInicio) { FavoritosScreen(favoritoViewModel) }
+                    Protegida(Rutas.GUARDADOS, rol, navController, irAlInicio) {
+                        GuardadosScreen(
+                            catalogo = catalogo,
+                            actividad = actividad,
+                            onServicio = abrirServicio,
+                            onBuscar = { navController.navigate(Rutas.buscar()) }
+                        )
+                    }
                 }
                 composable(Rutas.PERFIL) {
                     Protegida(Rutas.PERFIL, rol, navController, irAlInicio) {
                         (estadoSesion as? EstadoSesion.Autenticada)?.let { autenticada ->
-                            PerfilBasicoScreen(autenticada.sesion.usuario, onCerrarSesion = authViewModel::cerrarSesion)
+                            PerfilBasicoScreen(
+                                usuario = autenticada.sesion.usuario,
+                                onBloqueados = { navController.navigate(Rutas.BLOQUEADOS) },
+                                onReportes = { navController.navigate(Rutas.REPORTES) },
+                                onNormas = { navController.navigate(Rutas.NORMAS) },
+                                onCerrarSesion = authViewModel::cerrarSesion
+                            )
                         }
                     }
                 }
+
+                composable(Rutas.PATRON_SERVICIO) { entrada ->
+                    val id = entrada.arguments?.getString("id").orEmpty()
+                    Protegida(Rutas.SERVICIO, rol, navController, irAlInicio) {
+                        val vm: DetalleViewModel = viewModel(
+                            factory = fabricaVm { DetalleViewModel(id, catalogo.servicioPorId(id), contenedor.catalogoRepository) }
+                        )
+                        DetalleServicioScreen(
+                            viewModel = vm,
+                            actividad = actividad,
+                            rol = rol ?: RolNavegacion.INVITADO,
+                            onVolver = { navController.popBackStack() },
+                            onPrestador = { navController.navigate(Rutas.prestador(it)) },
+                            onCuentaRequerida = { mostrarHojaCuenta = true }
+                        )
+                    }
+                }
+                composable(Rutas.PATRON_PRESTADOR) { entrada ->
+                    val id = entrada.arguments?.getString("id").orEmpty()
+                    Protegida(Rutas.PRESTADOR_PUBLICO, rol, navController, irAlInicio) {
+                        val vm: PrestadorViewModel = viewModel(
+                            factory = fabricaVm {
+                                PrestadorViewModel(id, catalogo.prestadorPorId(id), contenedor.catalogoRepository)
+                            }
+                        )
+                        PrestadorPublicoScreen(
+                            perfilId = id,
+                            viewModel = vm,
+                            actividad = actividad,
+                            rol = rol ?: RolNavegacion.INVITADO,
+                            cargarPortada = catalogo::portada,
+                            onVolver = { navController.popBackStack() },
+                            onServicio = abrirServicio,
+                            onCuentaRequerida = { mostrarHojaCuenta = true }
+                        )
+                    }
+                }
+                composable(Rutas.BLOQUEADOS) {
+                    Protegida(Rutas.BLOQUEADOS, rol, navController, irAlInicio) {
+                        BloqueadosScreen(actividad, onVolver = { navController.popBackStack() })
+                    }
+                }
+                composable(Rutas.REPORTES) {
+                    Protegida(Rutas.REPORTES, rol, navController, irAlInicio) {
+                        MisReportesScreen(actividad, onVolver = { navController.popBackStack() }, onVerNormas = { navController.navigate(Rutas.NORMAS) })
+                    }
+                }
+                composable(Rutas.NORMAS) {
+                    NormasScreen(onVolver = { navController.popBackStack() }, onVerReportes = { navController.navigate(Rutas.REPORTES) })
+                }
+
                 composable(Rutas.PANEL) {
                     Protegida(Rutas.PANEL, rol, navController, irAlInicio) { PantallaEnConstruccion("Panel") }
                 }
@@ -188,6 +311,14 @@ fun AruyApp(contenedor: AppContainer) {
                 }
             }
         }
+    }
+
+    if (mostrarHojaCuenta) {
+        HojaCuentaRequerida(
+            onCrearCuenta = { mostrarHojaCuenta = false; navController.navigate(Rutas.REGISTRO) },
+            onIniciarSesion = { mostrarHojaCuenta = false; navController.navigate(Rutas.LOGIN) },
+            onCerrar = { mostrarHojaCuenta = false }
+        )
     }
 }
 
