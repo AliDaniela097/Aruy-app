@@ -6,6 +6,7 @@ import ec.edu.puce.aruy.data.remote.api.CalificacionApi
 import ec.edu.puce.aruy.data.remote.api.PerfilApi
 import ec.edu.puce.aruy.data.remote.api.PrestadorApi
 import ec.edu.puce.aruy.data.remote.api.ServicioApi
+import ec.edu.puce.aruy.data.remote.api.SuscripcionApi
 import ec.edu.puce.aruy.data.remote.api.UsuarioApi
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -54,4 +55,6 @@ class RetrofitClient(
     val calificacionApi: CalificacionApi = retrofit.create(CalificacionApi::class.java)
 
     val prestadorApi: PrestadorApi = retrofit.create(PrestadorApi::class.java)
+
+    val suscripcionApi: SuscripcionApi = retrofit.create(SuscripcionApi::class.java)
 }

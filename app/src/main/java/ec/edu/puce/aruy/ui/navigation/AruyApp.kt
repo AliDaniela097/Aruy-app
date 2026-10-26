@@ -34,7 +34,13 @@ import ec.edu.puce.aruy.domain.model.CategoriaServicio
 import ec.edu.puce.aruy.domain.model.EstadoSesion
 import ec.edu.puce.aruy.domain.model.RolUsuario
 import ec.edu.puce.aruy.ui.components.HojaCuentaRequerida
-import ec.edu.puce.aruy.ui.screen.PerfilBasicoScreen
+import ec.edu.puce.aruy.ui.screen.perfil.AjustesScreen
+import ec.edu.puce.aruy.ui.screen.perfil.AruyProScreen
+import ec.edu.puce.aruy.ui.screen.perfil.BajaCuentaScreen
+import ec.edu.puce.aruy.ui.screen.perfil.EditarPerfilScreen
+import ec.edu.puce.aruy.ui.screen.perfil.PerfilScreen
+import ec.edu.puce.aruy.ui.screen.perfil.PermisosScreen
+import ec.edu.puce.aruy.ui.screen.perfil.PrivacidadScreen
 import ec.edu.puce.aruy.ui.screen.auth.BienvenidaScreen
 import ec.edu.puce.aruy.ui.screen.auth.LoginScreen
 import ec.edu.puce.aruy.ui.screen.auth.RegistroScreen
@@ -53,8 +59,12 @@ import ec.edu.puce.aruy.ui.screen.prestador.PanelScreen
 import ec.edu.puce.aruy.ui.screen.prestador.PortafolioScreen
 import ec.edu.puce.aruy.ui.screen.sistema.AccesoDenegadoScreen
 import ec.edu.puce.aruy.ui.viewmodel.ActividadLocalViewModel
+import ec.edu.puce.aruy.ui.viewmodel.AjustesViewModel
+import ec.edu.puce.aruy.ui.viewmodel.AruyProViewModel
 import ec.edu.puce.aruy.ui.viewmodel.AuthViewModel
+import ec.edu.puce.aruy.ui.viewmodel.BajaCuentaViewModel
 import ec.edu.puce.aruy.ui.viewmodel.BuscarViewModel
+import ec.edu.puce.aruy.ui.viewmodel.EditarPerfilViewModel
 import ec.edu.puce.aruy.ui.viewmodel.CatalogoViewModel
 import ec.edu.puce.aruy.ui.viewmodel.DetalleViewModel
 import ec.edu.puce.aruy.ui.viewmodel.EditorServicioViewModel
@@ -95,6 +105,7 @@ fun AruyApp(contenedor: AppContainer) {
     val buscar: BuscarViewModel = viewModel(factory = contenedor.buscarViewModelFactory)
     val actividad: ActividadLocalViewModel = viewModel(factory = contenedor.actividadLocalViewModelFactory)
     val misServicios: MisServiciosViewModel = viewModel(factory = contenedor.misServiciosViewModelFactory)
+    val misServiciosUi by misServicios.ui.collectAsState()
 
     var mostrarHojaCuenta by remember { mutableStateOf(false) }
 
@@ -190,7 +201,7 @@ fun AruyApp(contenedor: AppContainer) {
                 }
 
                 composable(Rutas.INICIO) {
-                    Protegida(Rutas.INICIO, rol, navController, irAlInicio) {
+                    Protegida(Rutas.INICIO, rol, irAlInicio) {
                         InicioScreen(
                             catalogo = catalogo,
                             actividad = actividad,
@@ -220,7 +231,7 @@ fun AruyApp(contenedor: AppContainer) {
                     LaunchedEffect(categoria) {
                         if (categoria != null) buscar.aplicarCategoria(runCatching { CategoriaServicio.valueOf(categoria) }.getOrNull())
                     }
-                    Protegida(Rutas.BUSCAR, rol, navController, irAlInicio) {
+                    Protegida(Rutas.BUSCAR, rol, irAlInicio) {
                         BuscarScreen(
                             catalogo = catalogo,
                             buscar = buscar,
@@ -231,7 +242,7 @@ fun AruyApp(contenedor: AppContainer) {
                     }
                 }
                 composable(Rutas.GUARDADOS) {
-                    Protegida(Rutas.GUARDADOS, rol, navController, irAlInicio) {
+                    Protegida(Rutas.GUARDADOS, rol, irAlInicio) {
                         GuardadosScreen(
                             catalogo = catalogo,
                             actividad = actividad,
@@ -241,22 +252,69 @@ fun AruyApp(contenedor: AppContainer) {
                     }
                 }
                 composable(Rutas.PERFIL) {
-                    Protegida(Rutas.PERFIL, rol, navController, irAlInicio) {
+                    Protegida(Rutas.PERFIL, rol, irAlInicio) {
                         (estadoSesion as? EstadoSesion.Autenticada)?.let { autenticada ->
-                            PerfilBasicoScreen(
+                            PerfilScreen(
                                 usuario = autenticada.sesion.usuario,
+                                recibeSolicitudes = misServiciosUi.recibeSolicitudes,
+                                onCambiarRecepcion = misServicios::cambiarRecepcion,
+                                alAbrir = { if (rol == RolNavegacion.PRESTADOR) misServicios.cargarSiHaceFalta() },
+                                onEditar = { navController.navigate(Rutas.EDITAR_PERFIL) },
+                                onAjustes = { navController.navigate(Rutas.AJUSTES) },
+                                onPro = { navController.navigate(Rutas.PRO) },
+                                onPermisos = { navController.navigate(Rutas.PERMISOS) },
+                                onPrivacidad = { navController.navigate(Rutas.PRIVACIDAD) },
                                 onBloqueados = { navController.navigate(Rutas.BLOQUEADOS) },
                                 onReportes = { navController.navigate(Rutas.REPORTES) },
                                 onNormas = { navController.navigate(Rutas.NORMAS) },
+                                onBaja = { navController.navigate(Rutas.BAJA) },
                                 onCerrarSesion = authViewModel::cerrarSesion
                             )
                         }
                     }
                 }
+                composable(Rutas.EDITAR_PERFIL) {
+                    Protegida(Rutas.EDITAR_PERFIL, rol, irAlInicio) {
+                        val vm: EditarPerfilViewModel = viewModel(factory = contenedor.editarPerfilViewModelFactory)
+                        EditarPerfilScreen(vm, onVolver = { navController.popBackStack() })
+                    }
+                }
+                composable(Rutas.AJUSTES) {
+                    Protegida(Rutas.AJUSTES, rol, irAlInicio) {
+                        val vm: AjustesViewModel = viewModel(factory = contenedor.ajustesViewModelFactory)
+                        AjustesScreen(vm, onVolver = { navController.popBackStack() })
+                    }
+                }
+                composable(Rutas.PERMISOS) {
+                    Protegida(Rutas.PERMISOS, rol, irAlInicio) {
+                        PermisosScreen(onVolver = { navController.popBackStack() })
+                    }
+                }
+                composable(Rutas.PRIVACIDAD) {
+                    Protegida(Rutas.PRIVACIDAD, rol, irAlInicio) {
+                        PrivacidadScreen(
+                            onVolver = { navController.popBackStack() },
+                            onPermisos = { navController.navigate(Rutas.PERMISOS) },
+                            onBaja = { navController.navigate(Rutas.BAJA) }
+                        )
+                    }
+                }
+                composable(Rutas.BAJA) {
+                    Protegida(Rutas.BAJA, rol, irAlInicio) {
+                        val vm: BajaCuentaViewModel = viewModel(factory = contenedor.bajaCuentaViewModelFactory)
+                        BajaCuentaScreen(vm, onVolver = { navController.popBackStack() })
+                    }
+                }
+                composable(Rutas.PRO) {
+                    Protegida(Rutas.PRO, rol, irAlInicio) {
+                        val vm: AruyProViewModel = viewModel(factory = contenedor.aruyProViewModelFactory)
+                        AruyProScreen(vm, onVolver = { navController.popBackStack() })
+                    }
+                }
 
                 composable(Rutas.PATRON_SERVICIO) { entrada ->
                     val id = entrada.arguments?.getString("id").orEmpty()
-                    Protegida(Rutas.SERVICIO, rol, navController, irAlInicio) {
+                    Protegida(Rutas.SERVICIO, rol, irAlInicio) {
                         val vm: DetalleViewModel = viewModel(
                             factory = fabricaVm { DetalleViewModel(id, catalogo.servicioPorId(id), contenedor.catalogoRepository) }
                         )
@@ -272,7 +330,7 @@ fun AruyApp(contenedor: AppContainer) {
                 }
                 composable(Rutas.PATRON_PRESTADOR) { entrada ->
                     val id = entrada.arguments?.getString("id").orEmpty()
-                    Protegida(Rutas.PRESTADOR_PUBLICO, rol, navController, irAlInicio) {
+                    Protegida(Rutas.PRESTADOR_PUBLICO, rol, irAlInicio) {
                         val vm: PrestadorViewModel = viewModel(
                             factory = fabricaVm {
                                 PrestadorViewModel(id, catalogo.prestadorPorId(id), contenedor.catalogoRepository)
@@ -291,12 +349,12 @@ fun AruyApp(contenedor: AppContainer) {
                     }
                 }
                 composable(Rutas.BLOQUEADOS) {
-                    Protegida(Rutas.BLOQUEADOS, rol, navController, irAlInicio) {
+                    Protegida(Rutas.BLOQUEADOS, rol, irAlInicio) {
                         BloqueadosScreen(actividad, onVolver = { navController.popBackStack() })
                     }
                 }
                 composable(Rutas.REPORTES) {
-                    Protegida(Rutas.REPORTES, rol, navController, irAlInicio) {
+                    Protegida(Rutas.REPORTES, rol, irAlInicio) {
                         MisReportesScreen(actividad, onVolver = { navController.popBackStack() }, onVerNormas = { navController.navigate(Rutas.NORMAS) })
                     }
                 }
@@ -305,7 +363,7 @@ fun AruyApp(contenedor: AppContainer) {
                 }
 
                 composable(Rutas.PANEL) {
-                    Protegida(Rutas.PANEL, rol, navController, irAlInicio) {
+                    Protegida(Rutas.PANEL, rol, irAlInicio) {
                         PanelScreen(
                             viewModel = misServicios,
                             nombre = (estadoSesion as? EstadoSesion.Autenticada)?.sesion?.usuario?.nombre.orEmpty(),
@@ -316,7 +374,7 @@ fun AruyApp(contenedor: AppContainer) {
                     }
                 }
                 composable(Rutas.MIS_SERVICIOS) {
-                    Protegida(Rutas.MIS_SERVICIOS, rol, navController, irAlInicio) {
+                    Protegida(Rutas.MIS_SERVICIOS, rol, irAlInicio) {
                         MisServiciosScreen(
                             viewModel = misServicios,
                             onNuevo = { navController.navigate(Rutas.editor()) },
@@ -325,7 +383,7 @@ fun AruyApp(contenedor: AppContainer) {
                     }
                 }
                 composable(Rutas.PORTAFOLIO) {
-                    Protegida(Rutas.PORTAFOLIO, rol, navController, irAlInicio) {
+                    Protegida(Rutas.PORTAFOLIO, rol, irAlInicio) {
                         PortafolioScreen(misServicios, onPublicarServicio = { navController.navigate(Rutas.editor()) })
                     }
                 }
@@ -334,7 +392,7 @@ fun AruyApp(contenedor: AppContainer) {
                     arguments = listOf(navArgument("id") { type = NavType.StringType; nullable = true; defaultValue = null })
                 ) { entrada ->
                     val id = entrada.arguments?.getString("id")?.takeIf { it.isNotEmpty() }
-                    Protegida(Rutas.EDITOR, rol, navController, irAlInicio) {
+                    Protegida(Rutas.EDITOR, rol, irAlInicio) {
                         val vm: EditorServicioViewModel = viewModel(factory = contenedor.editorViewModelFactory(id))
                         EditorServicioScreen(
                             viewModel = vm,
@@ -360,19 +418,19 @@ fun AruyApp(contenedor: AppContainer) {
 }
 
 /**
- * Guarda de ruta (`router.js`): sin sesión lleva al login; con un rol que no corresponde
- * muestra "acceso denegado".
+ * Guarda de ruta (`router.js`): con un rol que no corresponde muestra "acceso denegado". Sin sesión no
+ * muestra nada: al cerrarla o vencer el token, el efecto central de [AruyApp] decide a dónde ir
+ * (bienvenida o login). Dos redirecciones a la vez dejaban a la persona en el login al cerrar sesión.
  */
 @Composable
 private fun Protegida(
     ruta: String,
     rol: RolNavegacion?,
-    navController: NavController,
     irAlInicio: () -> Unit,
     contenido: @Composable () -> Unit
 ) {
     when {
-        rol == null -> LaunchedEffect(Unit) { navController.irLimpio(Rutas.LOGIN) }
+        rol == null -> Unit
         !rutaPermitida(ruta, rol) -> AccesoDenegadoScreen(rol, irAlInicio)
         else -> contenido()
     }

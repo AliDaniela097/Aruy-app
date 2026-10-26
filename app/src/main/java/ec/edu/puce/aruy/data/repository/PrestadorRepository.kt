@@ -7,7 +7,6 @@ import ec.edu.puce.aruy.data.mapper.toDomain
 import ec.edu.puce.aruy.data.remote.api.PrestadorApi
 import ec.edu.puce.aruy.data.remote.api.ServicioApi
 import ec.edu.puce.aruy.data.remote.dto.CrearServicioRequest
-import ec.edu.puce.aruy.data.remote.dto.EditarPerfilRequest
 import ec.edu.puce.aruy.domain.model.CategoriaServicio
 import ec.edu.puce.aruy.domain.model.FotoPortafolio
 import ec.edu.puce.aruy.domain.model.Servicio
@@ -33,8 +32,10 @@ class PrestadorRepository(
     /** Disponibilidad del perfil: `true` = "Recibiendo solicitudes". */
     suspend fun disponibilidad(): Boolean = api.miPerfil().disponible
 
-    suspend fun cambiarDisponibilidad(disponible: Boolean): Boolean =
-        api.editarMiPerfil(EditarPerfilRequest(disponible = disponible)).disponible
+    suspend fun cambiarDisponibilidad(disponible: Boolean): Boolean {
+        val cuerpo = JsonObject().apply { addProperty("disponible", disponible) }
+        return api.editarMiPerfil(comoJson(cuerpo)).disponible
+    }
 
     suspend fun misServicios(perfilId: String): List<Servicio> =
         servicioApi.obtenerServiciosPorPrestador(perfilId).map { it.toDomain() }
