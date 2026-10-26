@@ -3,12 +3,15 @@ const crypto = require('crypto');
 const pool = require('../db');
 const { exigirToken, exigirRol } = require('../middleware/auth');
 const { duenoDeServicio } = require('../propiedad');
-const { esUuid, textoValido, esUrlHttps, limpiarEtiquetas, CATEGORIAS } = require('../validar');
+const { normalizarAWebp, sharpDisponible, ErrorImagen } = require('../imagen');
+const { config, detectarTipo, subirWebp, urlPublica, borrarReferencias, TIPOS_ENTRADA } = require('../almacenamiento');
+const { esUuid, textoValido, limpiarEtiquetas, CATEGORIAS } = require('../validar');
 
 const router = express.Router();
 
 const COLUMNAS = 'id, prestador_id, titulo, descripcion, categoria, precio_referencial, disponible';
 const MAX_FOTOS = 10;
+const MAX_ENTRADA = 5 * 1024 * 1024; // lo que se acepta recibir; lo que se guarda pesa como maximo 500 KB (WebP)
 
 function aServicio(f) {
   return {
@@ -17,35 +20,6 @@ function aServicio(f) {
     prestador_id: String(f.prestador_id),
     precio_referencial: f.precio_referencial === null ? null : Number(f.precio_referencial),
   };
-}
-
-// Valida y limpia una foto { referencia_imagen, descripcion?, etiquetas_ia? }. Devuelve null si es invalida.
-function limpiarFoto(f) {
-  if (!f || typeof f !== 'object') return null;
-  const etiquetas = limpiarEtiquetas(f.etiquetas_ia);
-  const descripcionOk = f.descripcion == null || textoValido(f.descripcion, 500);
-  if (!esUrlHttps(f.referencia_imagen) || etiquetas === null || !descripcionOk) return null;
-  return {
-    ref: f.referencia_imagen.trim(),
-    descripcion: f.descripcion == null ? null : f.descripcion.trim(),
-    etiquetas,
-  };
-}
-
-async function guardarFoto(client, servicioId, foto, orden) {
-  const fotoId = crypto.randomUUID();
-  await client.query(
-    `INSERT INTO fotos_portafolio (id, servicio_id, referencia_imagen, descripcion, orden, fecha_creacion)
-     VALUES ($1, $2, $3, $4, $5, NOW())`,
-    [fotoId, servicioId, foto.ref, foto.descripcion, orden]
-  );
-  for (const et of foto.etiquetas) {
-    await client.query(
-      'INSERT INTO etiquetas_fotos (id, foto_id, etiqueta) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
-      [crypto.randomUUID(), fotoId, et]
-    );
-  }
-  return { id: fotoId, referencia_imagen: foto.ref, descripcion: foto.descripcion, orden, etiquetas: foto.etiquetas };
 }
 
 // ---- Lecturas: publicas (el catalogo lo puede ver cualquiera) ----
@@ -66,6 +40,7 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Fotos de un servicio: "referencia_imagen" es lo guardado en la base (la ruta) y "url" la direccion para mostrarla
 router.get('/:id/fotos', async (req, res) => {
   if (!esUuid(req.params.id)) return res.status(400).json({ error: 'Id invalido' });
   try {
@@ -82,6 +57,7 @@ router.get('/:id/fotos', async (req, res) => {
       f.rows.map((x) => ({
         ...x,
         id: String(x.id),
+        url: urlPublica(x.referencia_imagen),
         etiquetas: e.rows.filter((t) => t.foto_id === x.id).map((t) => t.etiqueta),
       }))
     );
@@ -105,10 +81,9 @@ router.get('/:id', async (req, res) => {
 
 // ---- Escritura: solo un PRESTADOR con sesion iniciada, y solo sobre lo suyo ----
 
+// Publicar un servicio. Las fotos se suben DESPUES, una por una, con POST /servicios/:id/fotos
 router.post('/', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
   const b = req.body || {};
-  const fotos = b.fotos === undefined ? [] : b.fotos;
-
   if (!textoValido(b.titulo, 150)) return res.status(400).json({ error: 'titulo es obligatorio' });
   if (!textoValido(b.descripcion, 2000)) return res.status(400).json({ error: 'descripcion es obligatoria' });
   if (!CATEGORIAS.includes(b.categoria)) {
@@ -118,45 +93,25 @@ router.post('/', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
   if (p != null && !(typeof p === 'number' && p >= 0)) {
     return res.status(400).json({ error: 'precio_referencial debe ser un numero mayor o igual a 0' });
   }
-  if (!Array.isArray(fotos) || fotos.length > MAX_FOTOS) {
-    return res.status(400).json({ error: `fotos debe ser una lista de maximo ${MAX_FOTOS}` });
+  if (b.fotos !== undefined && !(Array.isArray(b.fotos) && b.fotos.length === 0)) {
+    return res.status(400).json({ error: 'Las fotos se suben despues, una por una, con POST /servicios/{id}/fotos' });
   }
-  const fotosLimpias = fotos.map(limpiarFoto);
-  if (fotosLimpias.includes(null)) {
-    return res.status(400).json({
-      error: 'cada foto necesita referencia_imagen (direccion https) y etiquetas_ia validas',
-    });
-  }
-
-  const client = await pool.connect();
   try {
     // En la base, servicios.prestador_id apunta al PERFIL del prestador (perfiles_prestadores)
-    const perfil = await client.query('SELECT id FROM perfiles_prestadores WHERE usuario_id = $1', [req.usuario.id]);
+    const perfil = await pool.query('SELECT id FROM perfiles_prestadores WHERE usuario_id = $1', [req.usuario.id]);
     if (perfil.rows.length === 0) {
       return res.status(409).json({ error: 'Primero crea tu perfil de prestador (POST /perfiles)' });
     }
-    const prestadorId = perfil.rows[0].id;
-
-    await client.query('BEGIN');
-    const servicioId = crypto.randomUUID();
-    const s = await client.query(
+    const s = await pool.query(
       `INSERT INTO servicios (id, prestador_id, titulo, descripcion, categoria, precio_referencial, disponible, fecha_publicacion)
        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
        RETURNING ${COLUMNAS}`,
-      [servicioId, prestadorId, b.titulo.trim(), b.descripcion.trim(), b.categoria, p ?? null, b.disponible ?? true]
+      [crypto.randomUUID(), perfil.rows[0].id, b.titulo.trim(), b.descripcion.trim(), b.categoria, p ?? null, b.disponible ?? true]
     );
-    const guardadas = [];
-    for (let i = 0; i < fotosLimpias.length; i++) {
-      guardadas.push(await guardarFoto(client, servicioId, fotosLimpias[i], i));
-    }
-    await client.query('COMMIT');
-    res.status(201).json({ ...aServicio(s.rows[0]), fotos: guardadas });
+    res.status(201).json(aServicio(s.rows[0]));
   } catch (e) {
-    await client.query('ROLLBACK').catch(() => {});
     console.error(e.message);
     res.status(500).json({ error: 'Error al crear el servicio' });
-  } finally {
-    client.release();
   }
 });
 
@@ -214,7 +169,7 @@ router.patch('/:id', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
   }
 });
 
-// Borrar mi servicio (tambien se borran sus fotos y etiquetas: ON DELETE CASCADE en la base)
+// Borrar mi servicio (sus fotos y etiquetas se borran en la base por ON DELETE CASCADE, y sus archivos en Supabase)
 router.delete('/:id', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
   const { id } = req.params;
   if (!esUuid(id)) return res.status(400).json({ error: 'Id invalido' });
@@ -222,7 +177,9 @@ router.delete('/:id', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
     const dueno = await duenoDeServicio(pool, id);
     if (dueno === null) return res.status(404).json({ error: 'Servicio no encontrado' });
     if (dueno !== req.usuario.id) return res.status(403).json({ error: 'Ese servicio no es tuyo' });
+    const fotos = await pool.query('SELECT referencia_imagen FROM fotos_portafolio WHERE servicio_id = $1', [id]);
     await pool.query('DELETE FROM servicios WHERE id = $1', [id]);
+    await borrarReferencias(fotos.rows.map((f) => f.referencia_imagen));
     res.status(204).end();
   } catch (e) {
     console.error(e.message);
@@ -230,38 +187,131 @@ router.delete('/:id', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
   }
 });
 
-// Agregar una foto (con sus etiquetas de IA) a un servicio ya publicado
-router.post('/:id/fotos', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
+// ---- Subir una foto al portafolio de mi servicio ----
+// El cuerpo es la imagen tal cual (JPG, PNG o WEBP). El servidor la convierte a WebP (max. 1280 px y 500 KB),
+// la guarda en Supabase Storage y registra SOLO su ruta en fotos_portafolio.referencia_imagen.
+// Opcional en la direccion: ?etiquetas=Tuberia,Bano (resultado de ML Kit) y ?descripcion=...
+
+class ServicioLleno extends Error {}
+
+// Se ejecuta ANTES de leer la imagen: el servicio debe ser mio y debe haber lugar
+async function verificarDuenoYCupo(req, res, next) {
   const { id } = req.params;
   if (!esUuid(id)) return res.status(400).json({ error: 'Id invalido' });
-  const foto = limpiarFoto(req.body);
-  if (!foto) {
-    return res.status(400).json({ error: 'Envia referencia_imagen (direccion https) y etiquetas_ia validas' });
+  if (!config().ok) {
+    return res.status(503).json({ error: 'El almacenamiento de imagenes no esta configurado en el servidor' });
   }
-  const client = await pool.connect();
+  if (!sharpDisponible()) {
+    return res.status(503).json({ error: 'Falta la libreria sharp en el servidor (npm install sharp)' });
+  }
   try {
-    const dueno = await duenoDeServicio(client, id);
+    const dueno = await duenoDeServicio(pool, id);
     if (dueno === null) return res.status(404).json({ error: 'Servicio no encontrado' });
     if (dueno !== req.usuario.id) return res.status(403).json({ error: 'Ese servicio no es tuyo' });
-
-    const c = await client.query(
-      'SELECT COUNT(*)::int AS n, COALESCE(MAX(orden), -1) AS maximo FROM fotos_portafolio WHERE servicio_id = $1',
-      [id]
-    );
+    const c = await pool.query('SELECT COUNT(*)::int AS n FROM fotos_portafolio WHERE servicio_id = $1', [id]);
     if (c.rows[0].n >= MAX_FOTOS) {
       return res.status(409).json({ error: `Un servicio admite como maximo ${MAX_FOTOS} fotos` });
     }
-    await client.query('BEGIN');
-    const guardada = await guardarFoto(client, id, foto, Number(c.rows[0].maximo) + 1);
-    await client.query('COMMIT');
-    res.status(201).json(guardada);
+    next();
   } catch (e) {
-    await client.query('ROLLBACK').catch(() => {});
     console.error(e.message);
-    res.status(500).json({ error: 'Error al agregar la foto' });
-  } finally {
-    client.release();
+    res.status(500).json({ error: 'Error al verificar el servicio' });
   }
-});
+}
+
+router.post(
+  '/:id/fotos',
+  exigirToken,
+  exigirRol('PRESTADOR'),
+  verificarDuenoYCupo,
+  express.raw({ type: TIPOS_ENTRADA, limit: MAX_ENTRADA }),
+  async (req, res) => {
+    const servicioId = req.params.id;
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+      return res.status(415).json({
+        error: 'Envia la imagen como cuerpo binario con Content-Type image/jpeg, image/png o image/webp',
+      });
+    }
+    const tipo = detectarTipo(req.body);
+    if (!tipo || tipo.mime !== String(req.headers['content-type']).split(';')[0].trim().toLowerCase()) {
+      return res.status(400).json({ error: 'El archivo no es una imagen JPG, PNG o WEBP valida' });
+    }
+
+    // Etiquetas y descripcion opcionales, validadas antes de procesar o subir nada
+    const crudas = [].concat(req.query.etiquetas ?? []).flatMap((x) => String(x).split(',')).map((x) => x.trim()).filter(Boolean);
+    const etiquetas = limpiarEtiquetas(crudas.length ? crudas : undefined);
+    const descripcion = req.query.descripcion === undefined ? null : req.query.descripcion;
+    if (etiquetas === null) {
+      return res.status(400).json({ error: 'etiquetas: maximo 20, de hasta 50 caracteres cada una' });
+    }
+    if (descripcion !== null && !textoValido(descripcion, 500)) {
+      return res.status(400).json({ error: 'descripcion invalida (maximo 500 caracteres)' });
+    }
+
+    let img;
+    try {
+      img = await normalizarAWebp(req.body);
+    } catch (e) {
+      if (e instanceof ErrorImagen) return res.status(e.status).json({ error: e.message });
+      console.error(e.message);
+      return res.status(500).json({ error: 'Error al procesar la imagen' });
+    }
+
+    const ruta = `${servicioId}/${crypto.randomUUID()}.webp`;
+    try {
+      await subirWebp(img.buffer, ruta);
+    } catch (e) {
+      console.error(e.message);
+      return res.status(502).json({ error: 'No se pudo guardar la imagen en el almacenamiento' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const c = await client.query(
+        'SELECT COUNT(*)::int AS n, COALESCE(MAX(orden), -1) AS maximo FROM fotos_portafolio WHERE servicio_id = $1',
+        [servicioId]
+      );
+      if (c.rows[0].n >= MAX_FOTOS) throw new ServicioLleno();
+      const fotoId = crypto.randomUUID();
+      const orden = Number(c.rows[0].maximo) + 1;
+      await client.query(
+        `INSERT INTO fotos_portafolio (id, servicio_id, referencia_imagen, descripcion, orden, fecha_creacion)
+         VALUES ($1, $2, $3, $4, $5, NOW())`,
+        [fotoId, servicioId, ruta, descripcion === null ? null : descripcion.trim(), orden]
+      );
+      for (const et of etiquetas) {
+        await client.query(
+          'INSERT INTO etiquetas_fotos (id, foto_id, etiqueta) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+          [crypto.randomUUID(), fotoId, et]
+        );
+      }
+      await client.query('COMMIT');
+      res.status(201).json({
+        id: fotoId,
+        referencia_imagen: ruta,
+        url: urlPublica(ruta),
+        descripcion: descripcion === null ? null : descripcion.trim(),
+        orden,
+        etiquetas,
+        formato: 'webp',
+        ancho: img.ancho,
+        alto: img.alto,
+        bytes: img.bytes,
+        calidad: img.calidad,
+      });
+    } catch (e) {
+      await client.query('ROLLBACK').catch(() => {});
+      await borrarReferencias([ruta]); // no dejar el archivo huerfano si la base fallo
+      if (e instanceof ServicioLleno) {
+        return res.status(409).json({ error: `Un servicio admite como maximo ${MAX_FOTOS} fotos` });
+      }
+      console.error(e.message);
+      res.status(500).json({ error: 'Error al registrar la foto' });
+    } finally {
+      client.release();
+    }
+  }
+);
 
 module.exports = router;

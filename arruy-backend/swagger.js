@@ -810,6 +810,122 @@ Object.assign(components.schemas, {
   },
 });
 
+// ---- Imágenes (Supabase Storage) ----
+const imagenBinaria = { type: 'string', format: 'binary' };
+paths['/imagenes'] = {
+  post: {
+    tags: ['Imágenes'],
+    summary: 'Subir una imagen (foto de trabajo o de perfil)',
+    description:
+      'El cuerpo es **la imagen tal cual** (JPG, PNG o WEBP, máximo 5 MB), con su `Content-Type`. ' +
+      'El servidor la guarda en Supabase Storage y devuelve su dirección pública (`url`). ' +
+      'Esa `url` es la que luego se manda en `referencia_imagen` (al publicar un servicio o agregar una foto) o en `foto_perfil`. ' +
+      'Se revisa el contenido real del archivo, no solo lo que diga el `Content-Type`.',
+    security: conToken,
+    requestBody: {
+      required: true,
+      content: { 'image/jpeg': { schema: imagenBinaria }, 'image/png': { schema: imagenBinaria }, 'image/webp': { schema: imagenBinaria } },
+    },
+    responses: {
+      201: { description: 'Imagen guardada', content: json(ref('ImagenSubida')) },
+      400: errorRespuesta('El archivo no es una imagen JPG, PNG o WEBP válida'),
+      401: e401,
+      413: errorRespuesta('La imagen pesa más de 5 MB'),
+      415: errorRespuesta('Falta la imagen o su Content-Type no es image/jpeg, image/png o image/webp'),
+      429: errorRespuesta('Demasiadas imágenes en poco tiempo'),
+      502: errorRespuesta('No se pudo guardar la imagen en el almacenamiento'),
+      503: errorRespuesta('El almacenamiento no está configurado en el servidor'),
+    },
+  },
+};
+tags.push({ name: 'Imágenes', description: 'Subida de fotos (se guardan en Supabase Storage; en la base solo va la dirección)' });
+components.schemas.ImagenSubida = {
+  type: 'object',
+  properties: {
+    url: { type: 'string', description: 'Dirección pública https de la imagen', example: 'https://xxxx.supabase.co/storage/v1/object/public/aruy-portafolio/ID/foto.jpg' },
+    ruta: { type: 'string' },
+    tipo: { type: 'string', example: 'image/jpeg' },
+    bytes: { type: 'integer' },
+  },
+};
+
+// ---- Fotos: se suben directo a un servicio mío (WebP en Supabase Storage) ----
+// Esta sección reemplaza lo anterior de /imagenes y de las fotos dentro de POST /servicios.
+delete paths['/imagenes'];
+tags.splice(tags.findIndex((t) => t.name === 'Imágenes'), 1);
+delete components.schemas.ImagenSubida;
+delete components.schemas.FotoNueva;
+delete components.schemas.FotoGuardada;
+delete components.schemas.ServicioCreado;
+delete components.schemas.ServicioNuevo.properties.fotos;
+
+paths['/servicios'].post.summary = 'Publicar un servicio';
+paths['/servicios'].post.description =
+  'Solo un `PRESTADOR` con perfil. El prestador se toma del token, no del cuerpo. ' +
+  'Las fotos se suben después, una por una, con `POST /servicios/{id}/fotos`.';
+paths['/servicios'].post.requestBody.content['application/json'].example = {
+  titulo: 'PRUEBA plomería',
+  descripcion: 'Servicio de prueba',
+  categoria: 'PLOMERIA',
+  precio_referencial: 25.5,
+};
+paths['/servicios'].post.responses[201] = { description: 'Servicio publicado', content: json(ref('Servicio')) };
+
+const imagenBin = { type: 'string', format: 'binary' };
+paths['/servicios/{id}/fotos'].post = {
+  tags: ['Servicios'],
+  summary: 'Subir una foto al portafolio de mi servicio',
+  description:
+    'El cuerpo es **la imagen tal cual** (JPG, PNG o WEBP, hasta 5 MB), con su `Content-Type`. ' +
+    'Primero se comprueba que el servicio sea tuyo y que tenga menos de 10 fotos; recién entonces se lee la imagen. ' +
+    'El servidor revisa el formato y las dimensiones reales, la **convierte a WebP** (máximo 1280 px por el lado largo, calidad 80 y, si hace falta para no pasar de 500 KB, menos), ' +
+    'la guarda en Supabase Storage y registra en la base **solo su ruta**. No se conserva la ubicación GPS ni el resto de datos EXIF.\n\n' +
+    'Opcional en la dirección: `?etiquetas=Tuberia,Bano` (resultado de ML Kit, máximo 20) y `?descripcion=...`.',
+  security: conToken,
+  parameters: [
+    idPath('Id del servicio'),
+    { name: 'etiquetas', in: 'query', required: false, description: 'Etiquetas separadas por coma', schema: { type: 'string', example: 'Tuberia,Bano' } },
+    { name: 'descripcion', in: 'query', required: false, description: 'Descripción de la foto (máximo 500 caracteres)', schema: { type: 'string' } },
+  ],
+  requestBody: {
+    required: true,
+    content: { 'image/webp': { schema: imagenBin }, 'image/jpeg': { schema: imagenBin }, 'image/png': { schema: imagenBin } },
+  },
+  responses: {
+    201: { description: 'Foto guardada', content: json(ref('FotoSubida')) },
+    400: errorRespuesta('Datos inválidos, o el archivo no es una imagen válida'),
+    401: e401,
+    403: errorRespuesta('Ese servicio no es tuyo, o no eres PRESTADOR'),
+    404: errorRespuesta('Servicio no encontrado'),
+    409: errorRespuesta('El servicio ya tiene 10 fotos'),
+    413: errorRespuesta('La imagen pesa más de 5 MB'),
+    415: errorRespuesta('Falta la imagen o su Content-Type no es image/jpeg, image/png o image/webp'),
+    422: errorRespuesta('No se pudo reducir la imagen a 500 KB'),
+    429: errorRespuesta('Demasiadas imágenes en poco tiempo'),
+    502: errorRespuesta('No se pudo guardar la imagen en el almacenamiento'),
+    503: errorRespuesta('El almacenamiento o el procesamiento de imágenes no están configurados en el servidor'),
+  },
+};
+
+components.schemas.FotoSubida = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    referencia_imagen: { type: 'string', description: 'Lo que se guarda en la base: la ruta dentro del bucket', example: 'ID_SERVICIO/ID_FOTO.webp' },
+    url: { type: 'string', description: 'Dirección pública para mostrar la foto', example: 'https://xxxx.supabase.co/storage/v1/object/public/aruy-portafolio/ID_SERVICIO/ID_FOTO.webp' },
+    descripcion: { type: 'string', nullable: true },
+    orden: { type: 'integer' },
+    etiquetas: { type: 'array', items: { type: 'string' } },
+    formato: { type: 'string', example: 'webp' },
+    ancho: { type: 'integer' },
+    alto: { type: 'integer' },
+    bytes: { type: 'integer', description: 'Tamaño final (máximo 512000)' },
+    calidad: { type: 'integer', description: 'Calidad WebP usada (80 si cupo; baja solo si hacía falta)' },
+  },
+};
+components.schemas.Foto.properties.url = { type: 'string', nullable: true, description: 'Dirección pública para mostrar la foto' };
+components.schemas.Foto.properties.referencia_imagen.description = 'Lo guardado en la base: la ruta dentro del bucket';
+
 module.exports = {
   openapi: '3.0.3',
   info,

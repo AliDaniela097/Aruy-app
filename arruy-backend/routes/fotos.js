@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const pool = require('../db');
 const { exigirToken, exigirRol } = require('../middleware/auth');
 const { duenoDeFoto } = require('../propiedad');
+const { borrarReferencias } = require('../almacenamiento');
 const { esUuid, limpiarEtiquetas } = require('../validar');
 
 const router = express.Router();
@@ -49,7 +50,9 @@ router.delete('/:id', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
     const dueno = await duenoDeFoto(pool, req.params.id);
     if (dueno === null) return res.status(404).json({ error: 'Foto no encontrada' });
     if (dueno !== req.usuario.id) return res.status(403).json({ error: 'Esa foto no es de tu servicio' });
+    const foto = await pool.query('SELECT referencia_imagen FROM fotos_portafolio WHERE id = $1', [req.params.id]);
     await pool.query('DELETE FROM fotos_portafolio WHERE id = $1', [req.params.id]);
+    await borrarReferencias(foto.rows.map((f) => f.referencia_imagen));
     res.status(204).end();
   } catch (e) {
     console.error(e.message);
