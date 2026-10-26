@@ -37,6 +37,26 @@ app.use('/usuarios', require('./routes/usuarios'));
 app.use('/perfiles', require('./routes/perfiles'));
 app.use('/fotos', require('./routes/fotos'));
 
+// Documentación interactiva (Swagger) en /docs
+try {
+  const swaggerUi = require('swagger-ui-express');
+  const especificacion = require('./swagger');
+  app.use(
+    '/docs',
+    (req, res, next) => {
+      // La pagina de Swagger usa scripts propios que el CSP de helmet bloquearia
+      res.removeHeader('Content-Security-Policy');
+      next();
+    },
+    swaggerUi.serve,
+    swaggerUi.setup(especificacion, { customSiteTitle: 'Aruy API' })
+  );
+  app.get('/docs.json', (req, res) => res.json(especificacion));
+} catch (e) {
+  if (e.code !== 'MODULE_NOT_FOUND') throw e;
+  console.warn('Swagger desactivado: ejecuta "npm install swagger-ui-express" en arruy-backend');
+}
+
 app.use((req, res) => res.status(404).json({ error: 'Ruta no encontrada' }));
 
 const PORT = process.env.PORT || 3000;

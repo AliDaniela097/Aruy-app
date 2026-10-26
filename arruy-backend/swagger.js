@@ -1,0 +1,459 @@
+// Documentación de la API (OpenAPI 3). Se ve y se prueba en http://localhost:3000/docs
+const errorRespuesta = (descripcion) => ({
+  description: descripcion,
+  content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+});
+
+const idPath = (descripcion) => ({
+  name: 'id',
+  in: 'path',
+  required: true,
+  description: descripcion,
+  schema: { type: 'string', format: 'uuid' },
+});
+
+const conToken = [{ bearerAuth: [] }];
+
+const CATEGORIAS = ['PLOMERIA', 'ELECTRICIDAD', 'ALBANILERIA', 'PINTURA', 'CARPINTERIA', 'BELLEZA', 'OTROS'];
+
+const info = {
+  title: 'Aruy API',
+  version: '1.0.0',
+  description:
+    'API REST de Aruy: conecta a trabajadores independientes de oficios en Quito con personas que buscan servicios.\n\n' +
+    '**Cómo probar las rutas protegidas:**\n' +
+    '1. Ejecuta `POST /auth/registro` (o `POST /auth/login` si ya tienes cuenta).\n' +
+    '2. Copia el valor de `token` de la respuesta.\n' +
+    '3. Pulsa el botón **Authorize** (arriba a la derecha), pega **solo el token** (sin la palabra Bearer) y pulsa Authorize.\n' +
+    '4. Las rutas con candado ya se pueden probar.\n\n' +
+    'Las consultas del catálogo (GET) son públicas y no necesitan token.',
+};
+
+const tags = [
+  { name: 'Salud', description: 'Comprobar que el servidor funciona' },
+  { name: 'Autenticación', description: 'Registro e inicio de sesión' },
+  { name: 'Usuarios', description: 'Consulta de usuarios' },
+  { name: 'Perfiles', description: 'Perfil del prestador (oficio y zona)' },
+  { name: 'Servicios', description: 'Catálogo de servicios y su publicación' },
+  { name: 'Fotos', description: 'Etiquetas de las fotos del portafolio (IA)' },
+];
+
+const ref = (nombre) => ({ $ref: `#/components/schemas/${nombre}` });
+const json = (schema) => ({ 'application/json': { schema } });
+
+const paths = {
+  '/health': {
+    get: {
+      tags: ['Salud'],
+      summary: 'Estado del servidor',
+      responses: {
+        200: {
+          description: 'El servidor está funcionando',
+          content: json({ type: 'object', properties: { estado: { type: 'string', example: 'ok' } } }),
+        },
+      },
+    },
+  },
+
+  '/auth/registro': {
+    post: {
+      tags: ['Autenticación'],
+      summary: 'Crear una cuenta',
+      description:
+        'Si el rol es `PRESTADOR` también se crea su perfil, por eso son obligatorios `oficio_principal` y `zona_cobertura`. ' +
+        'Para `CONTRATANTE` se ignoran. Límite: 20 intentos cada 15 minutos.',
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: ref('Registro'),
+            examples: {
+              prestador: {
+                summary: 'Prestador',
+                value: {
+                  nombre: 'PRUEBA Prestador',
+                  telefono: '0991234567',
+                  email: 'prestador@example.com',
+                  password: 'ClaveSegura123',
+                  rol: 'PRESTADOR',
+                  oficio_principal: 'Plomero',
+                  zona_cobertura: 'Norte de Quito',
+                  anios_experiencia: 3,
+                },
+              },
+              contratante: {
+                summary: 'Contratante',
+                value: {
+                  nombre: 'PRUEBA Cliente',
+                  telefono: '0997654321',
+                  email: 'cliente@example.com',
+                  password: 'ClaveSegura123',
+                  rol: 'CONTRATANTE',
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        201: { description: 'Cuenta creada', content: json(ref('RespuestaAuth')) },
+        400: errorRespuesta('Datos inválidos o incompletos'),
+        409: errorRespuesta('El correo o el teléfono ya están registrados'),
+        429: errorRespuesta('Demasiados intentos, intenta más tarde'),
+      },
+    },
+  },
+
+  '/auth/login': {
+    post: {
+      tags: ['Autenticación'],
+      summary: 'Iniciar sesión',
+      description: 'Devuelve un token válido por 8 horas. Límite: 20 intentos cada 15 minutos.',
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: ref('Login'),
+            example: { email: 'prestador@example.com', password: 'ClaveSegura123' },
+          },
+        },
+      },
+      responses: {
+        200: { description: 'Sesión iniciada', content: json(ref('RespuestaAuth')) },
+        400: errorRespuesta('Faltan el correo o la contraseña'),
+        401: errorRespuesta('Correo o contraseña incorrectos'),
+        429: errorRespuesta('Demasiados intentos, intenta más tarde'),
+      },
+    },
+  },
+
+  '/usuarios/{id}': {
+    get: {
+      tags: ['Usuarios'],
+      summary: 'Consultar un usuario',
+      description: 'Público. Nunca devuelve el correo ni la contraseña.',
+      parameters: [idPath('Id del usuario')],
+      responses: {
+        200: { description: 'El usuario', content: json(ref('Usuario')) },
+        400: errorRespuesta('Id con formato inválido'),
+        404: errorRespuesta('Usuario no encontrado'),
+      },
+    },
+  },
+
+  '/perfiles/yo': {
+    get: {
+      tags: ['Perfiles'],
+      summary: 'Mi perfil de prestador',
+      security: conToken,
+      responses: {
+        200: { description: 'Mi perfil', content: json(ref('Perfil')) },
+        401: errorRespuesta('Falta el token o no es válido'),
+        403: errorRespuesta('Solo un PRESTADOR puede hacerlo'),
+        404: errorRespuesta('Todavía no tienes perfil de prestador'),
+      },
+    },
+  },
+
+  '/perfiles': {
+    post: {
+      tags: ['Perfiles'],
+      summary: 'Crear mi perfil de prestador',
+      description:
+        'Para prestadores que se registraron antes de que existiera el perfil. Solo se puede crear uno por usuario.',
+      security: conToken,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: ref('PerfilNuevo'),
+            example: { oficio_principal: 'Plomero', zona_cobertura: 'Norte de Quito', anios_experiencia: 3 },
+          },
+        },
+      },
+      responses: {
+        201: { description: 'Perfil creado', content: json(ref('Perfil')) },
+        400: errorRespuesta('Datos inválidos'),
+        401: errorRespuesta('Falta el token o no es válido'),
+        403: errorRespuesta('Solo un PRESTADOR puede hacerlo'),
+        409: errorRespuesta('Ya tienes un perfil de prestador'),
+      },
+    },
+  },
+};
+
+Object.assign(paths, {
+  '/servicios': {
+    get: {
+      tags: ['Servicios'],
+      summary: 'Listar servicios',
+      description: 'Público. Se puede filtrar por prestador.',
+      parameters: [
+        {
+          name: 'prestador_id',
+          in: 'query',
+          required: false,
+          description: 'Id del PERFIL del prestador (no el id del usuario)',
+          schema: { type: 'string', format: 'uuid' },
+        },
+      ],
+      responses: {
+        200: { description: 'Lista de servicios', content: json({ type: 'array', items: ref('Servicio') }) },
+        400: errorRespuesta('prestador_id con formato inválido'),
+      },
+    },
+    post: {
+      tags: ['Servicios'],
+      summary: 'Publicar un servicio (con fotos y etiquetas de IA)',
+      description:
+        'Solo un `PRESTADOR` con perfil. El prestador se toma del token, no del cuerpo. ' +
+        'El servicio, sus fotos y sus etiquetas se guardan juntos: si algo falla, no se guarda nada.',
+      security: conToken,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: ref('ServicioNuevo'),
+            example: {
+              titulo: 'PRUEBA plomería',
+              descripcion: 'Servicio de prueba',
+              categoria: 'PLOMERIA',
+              precio_referencial: 25.5,
+              fotos: [{ referencia_imagen: 'https://ejemplo.com/foto1.jpg', etiquetas_ia: ['Tuberia', 'Bano'] }],
+            },
+          },
+        },
+      },
+      responses: {
+        201: { description: 'Servicio publicado', content: json(ref('ServicioCreado')) },
+        400: errorRespuesta('Datos inválidos'),
+        401: errorRespuesta('Falta el token o no es válido'),
+        403: errorRespuesta('Solo un PRESTADOR puede publicar'),
+        409: errorRespuesta('Primero crea tu perfil de prestador (POST /perfiles)'),
+      },
+    },
+  },
+
+  '/servicios/{id}': {
+    get: {
+      tags: ['Servicios'],
+      summary: 'Consultar un servicio',
+      parameters: [idPath('Id del servicio')],
+      responses: {
+        200: { description: 'El servicio', content: json(ref('Servicio')) },
+        400: errorRespuesta('Id con formato inválido'),
+        404: errorRespuesta('Servicio no encontrado'),
+      },
+    },
+  },
+
+  '/servicios/{id}/fotos': {
+    get: {
+      tags: ['Servicios'],
+      summary: 'Fotos de un servicio, con sus etiquetas',
+      parameters: [idPath('Id del servicio')],
+      responses: {
+        200: { description: 'Fotos del portafolio', content: json({ type: 'array', items: ref('Foto') }) },
+        400: errorRespuesta('Id con formato inválido'),
+      },
+    },
+  },
+
+  '/fotos/{id}/etiquetas': {
+    get: {
+      tags: ['Fotos'],
+      summary: 'Etiquetas de una foto',
+      parameters: [idPath('Id de la foto')],
+      responses: {
+        200: {
+          description: 'Lista de etiquetas',
+          content: json({ type: 'array', items: { type: 'string' }, example: ['Tuberia', 'Bano'] }),
+        },
+        400: errorRespuesta('Id con formato inválido'),
+      },
+    },
+    post: {
+      tags: ['Fotos'],
+      summary: 'Agregar etiquetas a una foto (resultado de ML Kit)',
+      description: 'Solo el prestador dueño del servicio de esa foto. Las etiquetas repetidas se ignoran.',
+      security: conToken,
+      parameters: [idPath('Id de la foto')],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['etiquetas'],
+              properties: { etiquetas: { type: 'array', maxItems: 20, items: { type: 'string', maxLength: 50 } } },
+            },
+            example: { etiquetas: ['Llave', 'Lavamanos'] },
+          },
+        },
+      },
+      responses: {
+        201: { description: 'Etiquetas guardadas' },
+        400: errorRespuesta('Datos inválidos'),
+        401: errorRespuesta('Falta el token o no es válido'),
+        403: errorRespuesta('Esa foto no es de tu servicio'),
+        404: errorRespuesta('Foto no encontrada'),
+      },
+    },
+  },
+});
+
+const components = {
+  securitySchemes: {
+    bearerAuth: {
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      description: 'Pega el token que devuelve /auth/login o /auth/registro (sin escribir "Bearer").',
+    },
+  },
+  schemas: {
+    Error: { type: 'object', properties: { error: { type: 'string', example: 'Id invalido' } } },
+    Registro: {
+      type: 'object',
+      required: ['nombre', 'telefono', 'email', 'password', 'rol'],
+      properties: {
+        nombre: { type: 'string', maxLength: 100 },
+        telefono: { type: 'string', maxLength: 20, description: 'Debe ser único' },
+        email: { type: 'string', format: 'email' },
+        password: { type: 'string', minLength: 8, description: 'Mínimo 8 caracteres' },
+        rol: { type: 'string', enum: ['PRESTADOR', 'CONTRATANTE'] },
+        foto_perfil: { type: 'string', nullable: true },
+        oficio_principal: { type: 'string', description: 'Obligatorio si el rol es PRESTADOR' },
+        zona_cobertura: { type: 'string', description: 'Obligatoria si el rol es PRESTADOR' },
+        descripcion_profesional: { type: 'string', nullable: true },
+        anios_experiencia: { type: 'integer', minimum: 0, maximum: 80, nullable: true },
+      },
+    },
+    Login: {
+      type: 'object',
+      required: ['email', 'password'],
+      properties: { email: { type: 'string', format: 'email' }, password: { type: 'string' } },
+    },
+    RespuestaAuth: {
+      type: 'object',
+      properties: {
+        token: { type: 'string', description: 'Úsalo en el botón Authorize' },
+        usuario: ref('Usuario'),
+        perfil_prestador_id: {
+          type: 'string',
+          format: 'uuid',
+          nullable: true,
+          description: 'Solo para prestadores con perfil',
+        },
+      },
+    },
+    Usuario: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        nombre: { type: 'string' },
+        telefono: { type: 'string' },
+        rol: { type: 'string', enum: ['PRESTADOR', 'CONTRATANTE'] },
+        estado_verificacion: { type: 'string', enum: ['NO_SOLICITADA', 'PENDIENTE', 'VERIFICADA', 'RECHAZADA'] },
+        foto_perfil: { type: 'string', nullable: true },
+        activo: { type: 'boolean' },
+      },
+    },
+    PerfilNuevo: {
+      type: 'object',
+      required: ['oficio_principal', 'zona_cobertura'],
+      properties: {
+        oficio_principal: { type: 'string', maxLength: 100 },
+        zona_cobertura: { type: 'string', maxLength: 100 },
+        descripcion_profesional: { type: 'string', nullable: true },
+        anios_experiencia: { type: 'integer', minimum: 0, maximum: 80, nullable: true },
+      },
+    },
+    Perfil: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid', description: 'Este es el id que usan los servicios como prestador_id' },
+        usuario_id: { type: 'string', format: 'uuid' },
+        oficio_principal: { type: 'string' },
+        descripcion_profesional: { type: 'string', nullable: true },
+        zona_cobertura: { type: 'string' },
+        anios_experiencia: { type: 'integer', nullable: true },
+        disponible: { type: 'boolean' },
+      },
+    },
+    Servicio: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        prestador_id: { type: 'string', format: 'uuid', description: 'Id del PERFIL del prestador' },
+        titulo: { type: 'string' },
+        descripcion: { type: 'string' },
+        categoria: { type: 'string', enum: CATEGORIAS },
+        precio_referencial: { type: 'number', nullable: true },
+        disponible: { type: 'boolean' },
+      },
+    },
+    FotoNueva: {
+      type: 'object',
+      required: ['referencia_imagen'],
+      properties: {
+        referencia_imagen: { type: 'string', maxLength: 1000 },
+        descripcion: { type: 'string', nullable: true },
+        etiquetas_ia: { type: 'array', maxItems: 20, items: { type: 'string', maxLength: 50 } },
+      },
+    },
+    ServicioNuevo: {
+      type: 'object',
+      required: ['titulo', 'descripcion', 'categoria'],
+      properties: {
+        titulo: { type: 'string', maxLength: 150 },
+        descripcion: { type: 'string', maxLength: 2000 },
+        categoria: { type: 'string', enum: CATEGORIAS },
+        precio_referencial: { type: 'number', minimum: 0, nullable: true },
+        disponible: { type: 'boolean', default: true },
+        fotos: { type: 'array', maxItems: 10, items: ref('FotoNueva') },
+      },
+    },
+    Foto: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        referencia_imagen: { type: 'string' },
+        descripcion: { type: 'string', nullable: true },
+        orden: { type: 'integer' },
+        etiquetas: { type: 'array', items: { type: 'string' } },
+      },
+    },
+    ServicioCreado: {
+      allOf: [
+        ref('Servicio'),
+        {
+          type: 'object',
+          properties: {
+            fotos: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  referencia_imagen: { type: 'string' },
+                  orden: { type: 'integer' },
+                  etiquetas: { type: 'array', items: { type: 'string' } },
+                },
+              },
+            },
+          },
+        },
+      ],
+    },
+  },
+};
+
+module.exports = {
+  openapi: '3.0.3',
+  info,
+  servers: [{ url: '/', description: 'Este mismo servidor' }],
+  tags,
+  paths,
+  components,
+};
