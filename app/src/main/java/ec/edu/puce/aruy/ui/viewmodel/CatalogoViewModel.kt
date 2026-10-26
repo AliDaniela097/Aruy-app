@@ -64,6 +64,11 @@ class CatalogoViewModel(
         if (_catalogo.value is EstadoApi.Inactivo) recargar()
     }
 
+    /** Si la carga falló por falta de internet, vuelve a intentar sola cuando regresa la conexión. */
+    fun recargarSiFallo() {
+        if (_catalogo.value is EstadoApi.Error) recargar()
+    }
+
     fun recargar() {
         if (_catalogo.value is EstadoApi.Cargando) return
         _catalogo.value = EstadoApi.Cargando

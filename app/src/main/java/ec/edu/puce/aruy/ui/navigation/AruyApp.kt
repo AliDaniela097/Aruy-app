@@ -1,8 +1,22 @@
 package ec.edu.puce.aruy.ui.navigation
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -109,6 +123,10 @@ fun AruyApp(contenedor: AppContainer) {
 
     var mostrarHojaCuenta by remember { mutableStateOf(false) }
 
+    // Aviso "Sin conexión" y reintento automático del catálogo cuando vuelve internet
+    val hayConexion by contenedor.conexion.hayConexion.collectAsState(initial = true)
+    LaunchedEffect(hayConexion) { if (hayConexion) catalogo.recargarSiFallo() }
+
     // Reacciona a los cambios de sesión: entrar, cerrar sesión o vencimiento del token
     var sesionAnterior by remember { mutableStateOf(estadoSesion) }
     LaunchedEffect(estadoSesion) {
@@ -160,7 +178,9 @@ fun AruyApp(contenedor: AppContainer) {
             }
         }
     ) { relleno ->
-        Box(Modifier.padding(relleno)) {
+        Column(Modifier.padding(relleno)) {
+        AvisoSinConexion(visible = !hayConexion && rutaActual != Rutas.SPLASH)
+        Box(Modifier.weight(1f)) {
             NavHost(navController = navController, startDestination = Rutas.SPLASH) {
 
                 composable(Rutas.SPLASH) {
@@ -406,6 +426,7 @@ fun AruyApp(contenedor: AppContainer) {
                 }
             }
         }
+        }
     }
 
     if (mostrarHojaCuenta) {
@@ -414,6 +435,28 @@ fun AruyApp(contenedor: AppContainer) {
             onIniciarSesion = { mostrarHojaCuenta = false; navController.navigate(Rutas.LOGIN) },
             onCerrar = { mostrarHojaCuenta = false }
         )
+    }
+}
+
+/** Franja fija bajo la barra de estado cuando el teléfono no tiene internet (`shell.js` del prototipo). */
+@Composable
+private fun AvisoSinConexion(visible: Boolean) {
+    if (!visible) return
+    Surface(
+        color = MaterialTheme.colorScheme.inverseSurface,
+        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { liveRegion = LiveRegionMode.Polite }
+    ) {
+        Row(
+            Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(Icons.Filled.WifiOff, contentDescription = null, modifier = Modifier.size(20.dp))
+            Text("Sin conexión. Algunas pantallas no cargarán hasta que vuelvas a conectarte.", style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }
 

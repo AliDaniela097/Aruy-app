@@ -25,8 +25,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -73,11 +76,13 @@ fun PortadaServicio(
     cargarPortada: suspend (String) -> String?,
     modifier: Modifier = Modifier
 ) {
-    val url by produceState<String?>(initialValue = null, servicioId) { value = cargarPortada(servicioId) }
+    var url by remember(servicioId) { mutableStateOf<String?>(null) }
+    LaunchedEffect(servicioId) { url = cargarPortada(servicioId) }
     Box(
+        // Primero se recorta y después se pinta el fondo: al revés, el fondo asoma por las esquinas
         modifier = modifier
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .clip(MaterialTheme.shapes.medium),
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center
     ) {
         if (url != null) {

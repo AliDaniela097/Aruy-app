@@ -4,11 +4,22 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,6 +30,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import java.io.File
+
+/**
+ * "×" para quitar una foto, en la esquina de la miniatura. El área táctil es de 48 dp (mínimo
+ * recomendado) y el círculo visible es más pequeño y queda dentro de la foto.
+ */
+@Composable
+fun BotonQuitarFoto(onClick: () -> Unit, modifier: Modifier = Modifier, habilitado: Boolean = true) {
+    IconButton(onClick = onClick, enabled = habilitado, modifier = modifier) {
+        Box(
+            Modifier
+                .size(28.dp)
+                .background(Color.Black.copy(alpha = 0.6f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Filled.Close, contentDescription = "Quitar foto", tint = Color.White, modifier = Modifier.size(16.dp))
+        }
+    }
+}
 
 /** Las dos formas de conseguir una foto: la cámara o la galería. */
 class AccionesFoto(val tomar: () -> Unit, val elegir: () -> Unit)

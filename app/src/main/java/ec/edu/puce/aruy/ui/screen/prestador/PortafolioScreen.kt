@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import ec.edu.puce.aruy.ui.components.AruyHoja
 import ec.edu.puce.aruy.ui.components.AruyTarjeta
+import ec.edu.puce.aruy.ui.components.BotonQuitarFoto
 import ec.edu.puce.aruy.ui.components.BotonRelleno
 import ec.edu.puce.aruy.ui.components.DialogoConfirmacion
 import ec.edu.puce.aruy.ui.components.EstadoCargando
@@ -126,16 +127,10 @@ fun PortafolioScreen(
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier.fillMaxSize().clip(MaterialTheme.shapes.medium)
                                         )
-                                        IconButton(
+                                        BotonQuitarFoto(
                                             onClick = { porQuitar = propio.servicio.id to foto.id },
-                                            modifier = Modifier
-                                                .align(Alignment.TopEnd)
-                                                .size(40.dp)
-                                                .padding(6.dp)
-                                                .background(Color.Black.copy(alpha = 0.55f), CircleShape)
-                                        ) {
-                                            Icon(Icons.Filled.Close, contentDescription = "Quitar foto", tint = Color.White, modifier = Modifier.size(16.dp))
-                                        }
+                                            modifier = Modifier.align(Alignment.TopEnd)
+                                        )
                                     }
                                 }
                                 repeat(3 - fila.size) { Box(Modifier.weight(1f)) }

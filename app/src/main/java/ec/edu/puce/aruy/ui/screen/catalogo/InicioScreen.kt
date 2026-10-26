@@ -45,6 +45,7 @@ import ec.edu.puce.aruy.domain.model.ServicioConPrestador
 import ec.edu.puce.aruy.ui.components.AruyTarjeta
 import ec.edu.puce.aruy.ui.components.BotonRelleno
 import ec.edu.puce.aruy.ui.components.EstadoVacio
+import ec.edu.puce.aruy.ui.components.tituloDeError
 import ec.edu.puce.aruy.ui.components.Esqueleto
 import ec.edu.puce.aruy.ui.components.FilaServicio
 import ec.edu.puce.aruy.ui.components.TarjetaServicio
@@ -127,7 +128,7 @@ fun InicioScreen(
             EstadoApi.Inactivo, EstadoApi.Cargando -> item { CargandoLista() }
             is EstadoApi.Error -> item {
                 EstadoVacio(
-                    titulo = "No pudimos cargar",
+                    titulo = tituloDeError(e.mensaje),
                     texto = e.mensaje,
                     icono = Icons.Filled.SearchOff,
                     textoBoton = "Reintentar",

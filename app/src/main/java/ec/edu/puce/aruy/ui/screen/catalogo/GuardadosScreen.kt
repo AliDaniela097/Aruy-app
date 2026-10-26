@@ -35,6 +35,7 @@ import ec.edu.puce.aruy.ui.components.BotonPeligro
 import ec.edu.puce.aruy.ui.components.DialogoConfirmacion
 import ec.edu.puce.aruy.ui.components.EstadoCargando
 import ec.edu.puce.aruy.ui.components.EstadoVacio
+import ec.edu.puce.aruy.ui.components.tituloDeError
 import ec.edu.puce.aruy.ui.components.FilaServicio
 import ec.edu.puce.aruy.ui.components.TipoTarjeta
 import ec.edu.puce.aruy.ui.viewmodel.ActividadLocalViewModel
@@ -65,7 +66,7 @@ fun GuardadosScreen(
             when (val e = estado) {
                 EstadoApi.Inactivo, EstadoApi.Cargando -> EstadoCargando("Cargando tus favoritos…")
                 is EstadoApi.Error -> EstadoVacio(
-                    titulo = "No pudimos cargar", texto = e.mensaje, icono = Icons.Filled.FavoriteBorder,
+                    titulo = tituloDeError(e.mensaje), texto = e.mensaje, icono = Icons.Filled.FavoriteBorder,
                     textoBoton = "Reintentar", onBoton = catalogo::recargar
                 )
                 is EstadoApi.Exito -> {

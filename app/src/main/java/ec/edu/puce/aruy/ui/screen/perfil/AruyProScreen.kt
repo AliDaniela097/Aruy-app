@@ -37,6 +37,7 @@ import ec.edu.puce.aruy.ui.components.BotonRelleno
 import ec.edu.puce.aruy.ui.components.DialogoConfirmacion
 import ec.edu.puce.aruy.ui.components.EstadoCargando
 import ec.edu.puce.aruy.ui.components.EstadoVacio
+import ec.edu.puce.aruy.ui.components.tituloDeError
 import ec.edu.puce.aruy.ui.components.Pastilla
 import ec.edu.puce.aruy.ui.components.TipoPastilla
 import ec.edu.puce.aruy.ui.components.TipoTarjeta
@@ -58,7 +59,7 @@ fun AruyProScreen(viewModel: AruyProViewModel, onVolver: () -> Unit) {
             when {
                 ui.cargando -> EstadoCargando("Cargando tu suscripción…")
                 ui.error != null -> EstadoVacio(
-                    titulo = "No pudimos cargar", texto = ui.error.orEmpty(), icono = Icons.Filled.Star,
+                    titulo = tituloDeError(ui.error.orEmpty()), texto = ui.error.orEmpty(), icono = Icons.Filled.Star,
                     textoBoton = "Reintentar", onBoton = viewModel::cargar
                 )
                 else -> Column(

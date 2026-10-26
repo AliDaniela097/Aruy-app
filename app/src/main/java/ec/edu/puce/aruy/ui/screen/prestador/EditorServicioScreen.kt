@@ -61,6 +61,7 @@ import ec.edu.puce.aruy.ui.components.AruyInterruptor
 import ec.edu.puce.aruy.ui.components.AruyTarjeta
 import ec.edu.puce.aruy.ui.components.BarraSuperior
 import ec.edu.puce.aruy.ui.components.BotonPeligro
+import ec.edu.puce.aruy.ui.components.BotonQuitarFoto
 import ec.edu.puce.aruy.ui.components.BotonRelleno
 
 import ec.edu.puce.aruy.ui.components.DialogoConfirmacion
@@ -302,17 +303,7 @@ private fun MiniaturaFoto(
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 .semantics { contentDescription = descripcion }
         ) { contenido() }
-        IconButton(
-            onClick = onQuitar,
-            enabled = quitarHabilitado,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .size(36.dp)
-                .padding(4.dp)
-                .background(Color.Black.copy(alpha = 0.55f), CircleShape)
-        ) {
-            Icon(Icons.Filled.Close, contentDescription = "Quitar foto", tint = Color.White, modifier = Modifier.size(16.dp))
-        }
+        BotonQuitarFoto(onClick = onQuitar, habilitado = quitarHabilitado, modifier = Modifier.align(Alignment.TopEnd))
     }
 }
 

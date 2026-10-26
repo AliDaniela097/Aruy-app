@@ -37,6 +37,7 @@ import ec.edu.puce.aruy.ui.components.BotonRelleno
 import ec.edu.puce.aruy.ui.components.BotonTexto
 import ec.edu.puce.aruy.ui.components.EstadoCargando
 import ec.edu.puce.aruy.ui.components.EstadoVacio
+import ec.edu.puce.aruy.ui.components.tituloDeError
 import ec.edu.puce.aruy.ui.components.TipoTarjeta
 import ec.edu.puce.aruy.ui.components.TituloSeccion
 import ec.edu.puce.aruy.ui.components.avisar
@@ -61,7 +62,7 @@ fun PanelScreen(
         when {
             !ui.cargado && ui.cargando -> EstadoCargando("Cargando tu panel…")
             ui.error != null && ui.servicios.isEmpty() -> EstadoVacio(
-                titulo = "No pudimos cargar", texto = ui.error.orEmpty(), icono = Icons.Filled.WorkOff,
+                titulo = tituloDeError(ui.error.orEmpty()), texto = ui.error.orEmpty(), icono = Icons.Filled.WorkOff,
                 textoBoton = "Reintentar", onBoton = viewModel::cargar
             )
             else -> LazyColumn(
