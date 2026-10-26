@@ -2,8 +2,6 @@ package ec.edu.puce.aruy.ui.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -35,7 +33,6 @@ import ec.edu.puce.aruy.domain.catalogo.OrdenCatalogo
 import ec.edu.puce.aruy.domain.model.CategoriaServicio
 import ec.edu.puce.aruy.domain.model.EstadoSesion
 import ec.edu.puce.aruy.domain.model.RolUsuario
-import ec.edu.puce.aruy.ui.components.EstadoVacio
 import ec.edu.puce.aruy.ui.components.HojaCuentaRequerida
 import ec.edu.puce.aruy.ui.screen.PerfilBasicoScreen
 import ec.edu.puce.aruy.ui.screen.auth.BienvenidaScreen
@@ -50,12 +47,18 @@ import ec.edu.puce.aruy.ui.screen.catalogo.InicioScreen
 import ec.edu.puce.aruy.ui.screen.catalogo.MisReportesScreen
 import ec.edu.puce.aruy.ui.screen.catalogo.NormasScreen
 import ec.edu.puce.aruy.ui.screen.catalogo.PrestadorPublicoScreen
+import ec.edu.puce.aruy.ui.screen.prestador.EditorServicioScreen
+import ec.edu.puce.aruy.ui.screen.prestador.MisServiciosScreen
+import ec.edu.puce.aruy.ui.screen.prestador.PanelScreen
+import ec.edu.puce.aruy.ui.screen.prestador.PortafolioScreen
 import ec.edu.puce.aruy.ui.screen.sistema.AccesoDenegadoScreen
 import ec.edu.puce.aruy.ui.viewmodel.ActividadLocalViewModel
 import ec.edu.puce.aruy.ui.viewmodel.AuthViewModel
 import ec.edu.puce.aruy.ui.viewmodel.BuscarViewModel
 import ec.edu.puce.aruy.ui.viewmodel.CatalogoViewModel
 import ec.edu.puce.aruy.ui.viewmodel.DetalleViewModel
+import ec.edu.puce.aruy.ui.viewmodel.EditorServicioViewModel
+import ec.edu.puce.aruy.ui.viewmodel.MisServiciosViewModel
 import ec.edu.puce.aruy.ui.viewmodel.PrestadorViewModel
 import ec.edu.puce.aruy.ui.viewmodel.fabricaVm
 
@@ -91,6 +94,7 @@ fun AruyApp(contenedor: AppContainer) {
     val catalogo: CatalogoViewModel = viewModel(factory = contenedor.catalogoViewModelFactory)
     val buscar: BuscarViewModel = viewModel(factory = contenedor.buscarViewModelFactory)
     val actividad: ActividadLocalViewModel = viewModel(factory = contenedor.actividadLocalViewModelFactory)
+    val misServicios: MisServiciosViewModel = viewModel(factory = contenedor.misServiciosViewModelFactory)
 
     var mostrarHojaCuenta by remember { mutableStateOf(false) }
 
@@ -301,13 +305,46 @@ fun AruyApp(contenedor: AppContainer) {
                 }
 
                 composable(Rutas.PANEL) {
-                    Protegida(Rutas.PANEL, rol, navController, irAlInicio) { PantallaEnConstruccion("Panel") }
+                    Protegida(Rutas.PANEL, rol, navController, irAlInicio) {
+                        PanelScreen(
+                            viewModel = misServicios,
+                            nombre = (estadoSesion as? EstadoSesion.Autenticada)?.sesion?.usuario?.nombre.orEmpty(),
+                            onNuevoServicio = { navController.navigate(Rutas.editor()) },
+                            onVerServicios = { navController.navigate(Rutas.MIS_SERVICIOS) },
+                            onEditar = { navController.navigate(Rutas.editor(it)) }
+                        )
+                    }
                 }
                 composable(Rutas.MIS_SERVICIOS) {
-                    Protegida(Rutas.MIS_SERVICIOS, rol, navController, irAlInicio) { PantallaEnConstruccion("Mis servicios") }
+                    Protegida(Rutas.MIS_SERVICIOS, rol, navController, irAlInicio) {
+                        MisServiciosScreen(
+                            viewModel = misServicios,
+                            onNuevo = { navController.navigate(Rutas.editor()) },
+                            onEditar = { navController.navigate(Rutas.editor(it)) }
+                        )
+                    }
                 }
                 composable(Rutas.PORTAFOLIO) {
-                    Protegida(Rutas.PORTAFOLIO, rol, navController, irAlInicio) { PantallaEnConstruccion("Portafolio") }
+                    Protegida(Rutas.PORTAFOLIO, rol, navController, irAlInicio) {
+                        PortafolioScreen(misServicios, onPublicarServicio = { navController.navigate(Rutas.editor()) })
+                    }
+                }
+                composable(
+                    Rutas.PATRON_EDITOR,
+                    arguments = listOf(navArgument("id") { type = NavType.StringType; nullable = true; defaultValue = null })
+                ) { entrada ->
+                    val id = entrada.arguments?.getString("id")?.takeIf { it.isNotEmpty() }
+                    Protegida(Rutas.EDITOR, rol, navController, irAlInicio) {
+                        val vm: EditorServicioViewModel = viewModel(factory = contenedor.editorViewModelFactory(id))
+                        EditorServicioScreen(
+                            viewModel = vm,
+                            onVolver = { navController.popBackStack() },
+                            onGuardado = {
+                                misServicios.invalidar()
+                                navController.popBackStack()
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -339,13 +376,4 @@ private fun Protegida(
         !rutaPermitida(ruta, rol) -> AccesoDenegadoScreen(rol, irAlInicio)
         else -> contenido()
     }
-}
-
-@Composable
-private fun PantallaEnConstruccion(titulo: String) {
-    EstadoVacio(
-        titulo = titulo,
-        texto = "Esta pantalla se construye en una de las próximas fases.",
-        icono = Icons.Filled.Construction
-    )
 }

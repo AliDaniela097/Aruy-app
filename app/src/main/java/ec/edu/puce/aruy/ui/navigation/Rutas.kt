@@ -34,13 +34,19 @@ object Rutas {
     const val REPORTES = "reportes"
     const val NORMAS = "normas"
 
+    const val EDITOR = "editor"
+
     /** Patrones con argumentos, tal como se registran en el NavHost. */
     const val PATRON_BUSCAR = "$BUSCAR?cat={cat}&foco={foco}"
+    const val PATRON_EDITOR = "$EDITOR?id={id}"
     const val PATRON_SERVICIO = "$SERVICIO/{id}"
     const val PATRON_PRESTADOR = "$PRESTADOR_PUBLICO/{id}"
 
     fun buscar(categoria: CategoriaServicio? = null, enfocar: Boolean = false) =
         "$BUSCAR?cat=${categoria?.name.orEmpty()}&foco=$enfocar"
+
+    /** Sin id abre el formulario de un servicio nuevo. */
+    fun editor(servicioId: String? = null) = "$EDITOR?id=${servicioId.orEmpty()}"
 
     fun servicio(id: String) = "$SERVICIO/$id"
 
@@ -92,7 +98,7 @@ fun rutaInicial(rol: RolNavegacion): String =
 
 /** Rutas permitidas por rol; el resto lleva a "acceso denegado" (guardas de `router.js`). */
 fun rutaPermitida(ruta: String, rol: RolNavegacion): Boolean = when (ruta) {
-    Rutas.PANEL, Rutas.MIS_SERVICIOS, Rutas.PORTAFOLIO -> rol == RolNavegacion.PRESTADOR
+    Rutas.PANEL, Rutas.MIS_SERVICIOS, Rutas.PORTAFOLIO, Rutas.EDITOR -> rol == RolNavegacion.PRESTADOR
     Rutas.GUARDADOS, Rutas.BLOQUEADOS -> rol == RolNavegacion.CONTRATANTE
     // Un invitado no ve el detalle: al tocar un servicio se le ofrece crear su cuenta
     Rutas.PERFIL, Rutas.SERVICIO, Rutas.PRESTADOR_PUBLICO, Rutas.REPORTES -> rol != RolNavegacion.INVITADO
