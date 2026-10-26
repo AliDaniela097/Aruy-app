@@ -449,6 +449,367 @@ const components = {
   },
 };
 
+// ---- CRUD completo: editar, borrar, calificaciones y suscripciones ----
+const sinContenido = (descripcion) => ({ description: descripcion });
+const e401 = errorRespuesta('Falta el token o no es válido');
+const SOLO_PRESTADOR = errorRespuesta('Solo un PRESTADOR puede hacerlo');
+
+paths['/servicios/{id}'].patch = {
+  tags: ['Servicios'],
+  summary: 'Editar mi servicio',
+  description: 'Solo el prestador dueño. Se cambian únicamente los campos que se envían; si no envías ninguno, responde 400.',
+  security: conToken,
+  parameters: [idPath('Id del servicio')],
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: ref('ServicioEditar'),
+        example: { titulo: 'PRUEBA plomería 24 horas', precio_referencial: 30, disponible: true },
+      },
+    },
+  },
+  responses: {
+    200: { description: 'Servicio actualizado', content: json(ref('Servicio')) },
+    400: errorRespuesta('Datos inválidos'),
+    401: e401,
+    403: errorRespuesta('Ese servicio no es tuyo, o no eres PRESTADOR'),
+    404: errorRespuesta('Servicio no encontrado'),
+  },
+};
+paths['/servicios/{id}'].delete = {
+  tags: ['Servicios'],
+  summary: 'Borrar mi servicio',
+  description: 'Solo el dueño. También se borran sus fotos y etiquetas (ON DELETE CASCADE en la base).',
+  security: conToken,
+  parameters: [idPath('Id del servicio')],
+  responses: {
+    204: sinContenido('Servicio borrado'),
+    401: e401,
+    403: errorRespuesta('Ese servicio no es tuyo, o no eres PRESTADOR'),
+    404: errorRespuesta('Servicio no encontrado'),
+  },
+};
+paths['/servicios/{id}/fotos'].post = {
+  tags: ['Servicios'],
+  summary: 'Agregar una foto a un servicio ya publicado',
+  description:
+    'La imagen se sube a Firebase Storage desde la app; aquí solo se guarda su dirección (`referencia_imagen`, debe ser https). Máximo 10 fotos por servicio.',
+  security: conToken,
+  parameters: [idPath('Id del servicio')],
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: ref('FotoNueva'),
+        example: {
+          referencia_imagen: 'https://firebasestorage.googleapis.com/v0/b/aruy/o/foto2.jpg?alt=media',
+          etiquetas_ia: ['Llave', 'Lavamanos'],
+        },
+      },
+    },
+  },
+  responses: {
+    201: { description: 'Foto agregada', content: json(ref('FotoGuardada')) },
+    400: errorRespuesta('Datos inválidos'),
+    401: e401,
+    403: errorRespuesta('Ese servicio no es tuyo, o no eres PRESTADOR'),
+    404: errorRespuesta('Servicio no encontrado'),
+    409: errorRespuesta('El servicio ya tiene 10 fotos'),
+  },
+};
+paths['/fotos/{id}'] = {
+  delete: {
+    tags: ['Fotos'],
+    summary: 'Borrar una foto de mi servicio',
+    description: 'Solo el dueño. Sus etiquetas se borran con ella.',
+    security: conToken,
+    parameters: [idPath('Id de la foto')],
+    responses: {
+      204: sinContenido('Foto borrada'),
+      401: e401,
+      403: errorRespuesta('Esa foto no es de tu servicio'),
+      404: errorRespuesta('Foto no encontrada'),
+    },
+  },
+};
+paths['/perfiles/yo'].patch = {
+  tags: ['Perfiles'],
+  summary: 'Editar mi perfil de prestador',
+  description: 'El perfil no se borra (la base lo impide si tiene servicios o calificaciones); para ocultarte usa `disponible: false`.',
+  security: conToken,
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: ref('PerfilEditar'),
+        example: { zona_cobertura: 'Quito norte y valles', anios_experiencia: 5, disponible: true },
+      },
+    },
+  },
+  responses: {
+    200: { description: 'Perfil actualizado', content: json(ref('Perfil')) },
+    400: errorRespuesta('Datos inválidos'),
+    401: e401,
+    403: SOLO_PRESTADOR,
+    404: errorRespuesta('Todavía no tienes perfil de prestador'),
+  },
+};
+
+paths['/usuarios/yo'] = {
+  get: {
+    tags: ['Usuarios'],
+    summary: 'Mis datos (incluye mi correo)',
+    security: conToken,
+    responses: {
+      200: { description: 'Mis datos', content: json(ref('MisDatos')) },
+      401: e401,
+      404: errorRespuesta('Usuario no encontrado'),
+    },
+  },
+  patch: {
+    tags: ['Usuarios'],
+    summary: 'Editar mis datos',
+    security: conToken,
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: ref('UsuarioEditar'),
+          example: { nombre: 'Alisson Basantes', telefono: '0991234567' },
+        },
+      },
+    },
+    responses: {
+      200: { description: 'Datos actualizados', content: json(ref('Usuario')) },
+      400: errorRespuesta('Datos inválidos'),
+      401: e401,
+      409: errorRespuesta('Ese teléfono ya está registrado'),
+    },
+  },
+  delete: {
+    tags: ['Usuarios'],
+    summary: 'Darme de baja',
+    description:
+      'No se borra el usuario (la base lo impide si tiene perfil o calificaciones y así se conserva el historial): se marca `activo = false`, ' +
+      'su perfil queda no disponible y ya no puede iniciar sesión. Su token actual sigue siendo válido hasta que venza (8 horas).',
+    security: conToken,
+    responses: { 204: sinContenido('Baja realizada'), 401: e401 },
+  },
+};
+
+paths['/calificaciones'] = {
+  get: {
+    tags: ['Calificaciones'],
+    summary: 'Calificaciones de un prestador, con promedio',
+    description: 'Público.',
+    parameters: [
+      {
+        name: 'perfil_prestador_id',
+        in: 'query',
+        required: true,
+        description: 'Id del PERFIL del prestador',
+        schema: { type: 'string', format: 'uuid' },
+      },
+    ],
+    responses: {
+      200: { description: 'Promedio y lista', content: json(ref('CalificacionesDePrestador')) },
+      400: errorRespuesta('Falta perfil_prestador_id o no es válido'),
+    },
+  },
+  post: {
+    tags: ['Calificaciones'],
+    summary: 'Calificar a un prestador',
+    description: 'Solo un `CONTRATANTE`, una vez por prestador, con puntuación entera de 1 a 5.',
+    security: conToken,
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: ref('CalificacionNueva'),
+          example: { perfil_prestador_id: '00000000-0000-4000-8000-000000000000', puntuacion: 5, comentario: 'Muy puntual' },
+        },
+      },
+    },
+    responses: {
+      201: { description: 'Calificación guardada', content: json(ref('Calificacion')) },
+      400: errorRespuesta('Datos inválidos'),
+      401: e401,
+      403: errorRespuesta('Solo un CONTRATANTE puede calificar'),
+      404: errorRespuesta('Prestador no encontrado'),
+      409: errorRespuesta('Ya calificaste a este prestador'),
+    },
+  },
+};
+
+paths['/suscripciones'] = {
+  post: {
+    tags: ['Suscripciones'],
+    summary: 'Suscribirme (pago SIMULADO)',
+    description:
+      'No hay pago real: queda `ACTIVA` de inmediato. `ARUY_PRO_SEMANAL` dura 7 días y `ARUY_PRO_MENSUAL` 30. Solo una activa a la vez.',
+    security: conToken,
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: ref('SuscripcionNueva'),
+          example: { tipo_plan: 'ARUY_PRO_MENSUAL', renovacion_automatica: false },
+        },
+      },
+    },
+    responses: {
+      201: { description: 'Suscripción activa', content: json(ref('Suscripcion')) },
+      400: errorRespuesta('Plan inválido'),
+      401: e401,
+      403: SOLO_PRESTADOR,
+      409: errorRespuesta('Ya tienes una suscripción activa, o falta tu perfil de prestador'),
+    },
+  },
+};
+paths['/suscripciones/mia'] = {
+  get: {
+    tags: ['Suscripciones'],
+    summary: 'Mi suscripción más reciente',
+    description: 'Si la fecha de fin ya pasó, se muestra como `VENCIDA`.',
+    security: conToken,
+    responses: {
+      200: { description: 'Mi suscripción', content: json(ref('Suscripcion')) },
+      401: e401,
+      403: SOLO_PRESTADOR,
+      404: errorRespuesta('Todavía no tienes suscripciones'),
+    },
+  },
+};
+paths['/suscripciones/{id}/cancelar'] = {
+  patch: {
+    tags: ['Suscripciones'],
+    summary: 'Cancelar mi suscripción',
+    security: conToken,
+    parameters: [idPath('Id de la suscripción')],
+    responses: {
+      200: { description: 'Suscripción cancelada', content: json(ref('Suscripcion')) },
+      401: e401,
+      403: errorRespuesta('Esa suscripción no es tuya, o no eres PRESTADOR'),
+      404: errorRespuesta('Suscripción no encontrada'),
+      409: errorRespuesta('Ya estaba cancelada o vencida'),
+    },
+  },
+};
+
+tags.push(
+  { name: 'Calificaciones', description: 'Opiniones de los contratantes sobre los prestadores' },
+  { name: 'Suscripciones', description: 'Plan Aruy Pro (pago simulado)' }
+);
+
+Object.assign(components.schemas, {
+  ServicioEditar: {
+    type: 'object',
+    description: 'Envía solo los campos que quieras cambiar',
+    properties: {
+      titulo: { type: 'string', maxLength: 150 },
+      descripcion: { type: 'string', maxLength: 2000 },
+      categoria: { type: 'string', enum: CATEGORIAS },
+      precio_referencial: { type: 'number', minimum: 0, nullable: true },
+      disponible: { type: 'boolean' },
+    },
+  },
+  FotoGuardada: {
+    type: 'object',
+    properties: {
+      id: { type: 'string', format: 'uuid' },
+      referencia_imagen: { type: 'string' },
+      descripcion: { type: 'string', nullable: true },
+      orden: { type: 'integer' },
+      etiquetas: { type: 'array', items: { type: 'string' } },
+    },
+  },
+  PerfilEditar: {
+    type: 'object',
+    description: 'Envía solo los campos que quieras cambiar',
+    properties: {
+      oficio_principal: { type: 'string', maxLength: 100 },
+      zona_cobertura: { type: 'string', maxLength: 100 },
+      descripcion_profesional: { type: 'string', nullable: true },
+      anios_experiencia: { type: 'integer', minimum: 0, maximum: 80, nullable: true },
+      disponible: { type: 'boolean' },
+    },
+  },
+  UsuarioEditar: {
+    type: 'object',
+    description: 'Envía solo los campos que quieras cambiar',
+    properties: {
+      nombre: { type: 'string', maxLength: 100 },
+      telefono: { type: 'string', maxLength: 20 },
+      foto_perfil: { type: 'string', nullable: true, description: 'Dirección https de la imagen' },
+    },
+  },
+  MisDatos: {
+    allOf: [ref('Usuario'), { type: 'object', properties: { email: { type: 'string', format: 'email' } } }],
+  },
+  CalificacionNueva: {
+    type: 'object',
+    required: ['perfil_prestador_id', 'puntuacion'],
+    properties: {
+      perfil_prestador_id: { type: 'string', format: 'uuid' },
+      puntuacion: { type: 'integer', minimum: 1, maximum: 5 },
+      comentario: { type: 'string', maxLength: 1000, nullable: true },
+    },
+  },
+  Calificacion: {
+    type: 'object',
+    properties: {
+      id: { type: 'string', format: 'uuid' },
+      perfil_prestador_id: { type: 'string', format: 'uuid' },
+      puntuacion: { type: 'integer' },
+      comentario: { type: 'string', nullable: true },
+      fecha_creacion: { type: 'string', format: 'date-time' },
+    },
+  },
+  CalificacionesDePrestador: {
+    type: 'object',
+    properties: {
+      perfil_prestador_id: { type: 'string', format: 'uuid' },
+      promedio: { type: 'number', nullable: true, example: 4.5 },
+      total: { type: 'integer' },
+      calificaciones: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            puntuacion: { type: 'integer' },
+            comentario: { type: 'string', nullable: true },
+            fecha_creacion: { type: 'string', format: 'date-time' },
+            contratante: { type: 'string', description: 'Nombre de quien calificó' },
+          },
+        },
+      },
+    },
+  },
+  SuscripcionNueva: {
+    type: 'object',
+    required: ['tipo_plan'],
+    properties: {
+      tipo_plan: { type: 'string', enum: ['ARUY_PRO_SEMANAL', 'ARUY_PRO_MENSUAL'] },
+      renovacion_automatica: { type: 'boolean', default: false },
+    },
+  },
+  Suscripcion: {
+    type: 'object',
+    properties: {
+      id: { type: 'string', format: 'uuid' },
+      prestador_id: { type: 'string', format: 'uuid', description: 'Id del PERFIL del prestador' },
+      tipo_plan: { type: 'string', enum: ['ARUY_PRO_SEMANAL', 'ARUY_PRO_MENSUAL'] },
+      estado: { type: 'string', enum: ['PENDIENTE', 'ACTIVA', 'CANCELADA', 'VENCIDA'] },
+      fecha_inicio: { type: 'string', format: 'date-time' },
+      fecha_fin: { type: 'string', format: 'date-time', nullable: true },
+      renovacion_automatica: { type: 'boolean' },
+      simulada: { type: 'boolean', description: 'Solo al crearla: el pago es simulado' },
+    },
+  },
+});
+
 module.exports = {
   openapi: '3.0.3',
   info,

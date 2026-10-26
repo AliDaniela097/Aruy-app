@@ -36,6 +36,8 @@ app.use('/servicios', require('./routes/servicios'));
 app.use('/usuarios', require('./routes/usuarios'));
 app.use('/perfiles', require('./routes/perfiles'));
 app.use('/fotos', require('./routes/fotos'));
+app.use('/calificaciones', require('./routes/calificaciones'));
+app.use('/suscripciones', require('./routes/suscripciones'));
 
 // Documentación interactiva (Swagger) en /docs
 try {
