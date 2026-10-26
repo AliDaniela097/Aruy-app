@@ -61,13 +61,14 @@ router.post('/', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
 
     await client.query('BEGIN');
     await marcarVencidas(client, perfilId);
-    const activa = await client.query(
-      `SELECT 1 FROM suscripciones WHERE prestador_id = $1 AND estado = 'ACTIVA'`,
+    // La base solo admite UNA suscripcion PENDIENTE o ACTIVA por prestador (indice unico parcial)
+    const vigente = await client.query(
+      `SELECT 1 FROM suscripciones WHERE prestador_id = $1 AND estado IN ('PENDIENTE', 'ACTIVA')`,
       [perfilId]
     );
-    if (activa.rows.length > 0) {
+    if (vigente.rows.length > 0) {
       await client.query('ROLLBACK');
-      return res.status(409).json({ error: 'Ya tienes una suscripcion activa' });
+      return res.status(409).json({ error: 'Ya tienes una suscripcion pendiente o activa' });
     }
     const r = await client.query(
       `INSERT INTO suscripciones (id, prestador_id, tipo_plan, estado, fecha_inicio, fecha_fin, renovacion_automatica)
@@ -79,6 +80,8 @@ router.post('/', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
     res.status(201).json({ ...aSuscripcion(r.rows[0]), simulada: true });
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {});
+    // Dos peticiones al mismo tiempo: el indice unico de la base frena a la segunda
+    if (e.code === '23505') return res.status(409).json({ error: 'Ya tienes una suscripcion pendiente o activa' });
     console.error(e.message);
     res.status(500).json({ error: 'Error al crear la suscripcion' });
   } finally {
