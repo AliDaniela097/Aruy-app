@@ -26,6 +26,12 @@ object Rutas {
     const val PANEL = "panel"
     const val MIS_SERVICIOS = "servicios"
     const val PORTAFOLIO = "portafolio"
+
+    /** Pantallas de entrada: con una sesión real redirigen al inicio del rol (`router.js`). */
+    val ENTRADA = setOf(BIENVENIDA, LOGIN, REGISTRO)
+
+    /** Rutas que se ven con la barra inferior. */
+    val CON_BARRA = setOf(INICIO, BUSCAR, GUARDADOS, PERFIL, PANEL, MIS_SERVICIOS, PORTAFOLIO)
 }
 
 /** Quién está usando la app: define qué pestañas se ven y a qué pantallas puede entrar. */
