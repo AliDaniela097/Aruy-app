@@ -2,6 +2,7 @@ package ec.edu.puce.aruy
 
 import android.content.Context
 import androidx.lifecycle.ViewModelProvider
+import ec.edu.puce.aruy.data.local.BorradorStore
 import ec.edu.puce.aruy.data.local.DatabaseProvider
 import ec.edu.puce.aruy.data.local.PreferenciasStore
 import ec.edu.puce.aruy.data.remote.RetrofitClient
@@ -9,13 +10,18 @@ import ec.edu.puce.aruy.data.repository.ActividadLocalRepository
 import ec.edu.puce.aruy.data.repository.AuthRepository
 import ec.edu.puce.aruy.data.repository.CatalogoRepository
 import ec.edu.puce.aruy.data.repository.FavoritoRepository
+import ec.edu.puce.aruy.data.repository.PrestadorRepository
 import ec.edu.puce.aruy.data.sesion.SesionManager
 import ec.edu.puce.aruy.data.sesion.SesionStore
 import ec.edu.puce.aruy.ui.viewmodel.ActividadLocalViewModel
 import ec.edu.puce.aruy.ui.viewmodel.AuthViewModel
 import ec.edu.puce.aruy.ui.viewmodel.BuscarViewModel
 import ec.edu.puce.aruy.ui.viewmodel.CatalogoViewModel
+import ec.edu.puce.aruy.ui.viewmodel.EditorServicioViewModel
+import ec.edu.puce.aruy.ui.viewmodel.MisServiciosViewModel
 import ec.edu.puce.aruy.ui.viewmodel.fabricaVm
+import ec.edu.puce.aruy.util.ConversorWebp
+import ec.edu.puce.aruy.util.EtiquetadorFotos
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -40,7 +46,13 @@ class AppContainer(contexto: Context) {
         alExpirar = sesionManager::expirar
     )
 
+    // Fotos: se convierten a WebP y se etiquetan con ML Kit en el teléfono antes de subirse
+    val conversorWebp = ConversorWebp(contexto.applicationContext)
+    val etiquetadorFotos = EtiquetadorFotos()
+    val borradorStore = BorradorStore(contexto.applicationContext)
+
     val authRepository = AuthRepository(cliente.authApi, sesionManager)
+    val prestadorRepository = PrestadorRepository(cliente.prestadorApi, cliente.servicioApi)
     val catalogoRepository = CatalogoRepository(cliente.servicioApi, cliente.perfilApi, cliente.calificacionApi)
     val favoritoRepository = FavoritoRepository(database.favoritoDao())
     val actividadLocalRepository = ActividadLocalRepository(
@@ -51,6 +63,12 @@ class AppContainer(contexto: Context) {
     val catalogoViewModelFactory: ViewModelProvider.Factory =
         fabricaVm { CatalogoViewModel(catalogoRepository, actividadLocalRepository, sesionManager) }
     val buscarViewModelFactory: ViewModelProvider.Factory = fabricaVm { BuscarViewModel() }
+    val misServiciosViewModelFactory: ViewModelProvider.Factory =
+        fabricaVm { MisServiciosViewModel(prestadorRepository, sesionManager, conversorWebp, etiquetadorFotos) }
+
+    fun editorViewModelFactory(servicioId: String?): ViewModelProvider.Factory = fabricaVm {
+        EditorServicioViewModel(servicioId, prestadorRepository, sesionManager, conversorWebp, etiquetadorFotos, borradorStore)
+    }
     val actividadLocalViewModelFactory: ViewModelProvider.Factory =
         fabricaVm { ActividadLocalViewModel(favoritoRepository, actividadLocalRepository, sesionManager) }
 

@@ -43,7 +43,7 @@ import ec.edu.puce.aruy.domain.model.CategoriaServicio
 import ec.edu.puce.aruy.domain.model.EstadoApi
 import ec.edu.puce.aruy.domain.model.ServicioConPrestador
 import ec.edu.puce.aruy.ui.components.AruyTarjeta
-import ec.edu.puce.aruy.ui.components.BotonSuave
+import ec.edu.puce.aruy.ui.components.BotonRelleno
 import ec.edu.puce.aruy.ui.components.EstadoVacio
 import ec.edu.puce.aruy.ui.components.Esqueleto
 import ec.edu.puce.aruy.ui.components.FilaServicio
@@ -105,7 +105,7 @@ fun InicioScreen(
                         "Crea una para ver precios, calificaciones y contactar.",
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    BotonSuave("Crear cuenta", onCrearCuenta, modifier = Modifier.padding(top = 8.dp))
+                    BotonRelleno("Crear cuenta", onCrearCuenta, modifier = Modifier.padding(top = 8.dp))
                 }
             }
         }

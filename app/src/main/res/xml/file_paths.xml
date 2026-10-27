@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Solo la carpeta temporal de fotos de la cámara; se borra después de convertir la foto a WebP -->
+<paths>
+    <cache-path name="fotos_camara" path="fotos/" />
+</paths>
