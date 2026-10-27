@@ -52,10 +52,8 @@ fun AruyCampo(
             .heightIn(min = 56.dp),
         label = { Text(etiqueta) },
         placeholder = placeholder?.let { { Text(it) } },
-        supportingText = {
-            val mensaje = error ?: ayuda
-            if (mensaje != null) Text(mensaje)
-        },
+        // Sin mensaje no se reserva la línea de apoyo: así los campos no quedan separados de más
+        supportingText = (error ?: ayuda)?.let { mensaje -> { Text(mensaje) } },
         isError = error != null,
         singleLine = unaLinea,
         minLines = lineasMin,

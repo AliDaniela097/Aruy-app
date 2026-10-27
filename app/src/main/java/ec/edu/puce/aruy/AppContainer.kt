@@ -10,10 +10,16 @@ import ec.edu.puce.aruy.data.repository.ActividadLocalRepository
 import ec.edu.puce.aruy.data.repository.AuthRepository
 import ec.edu.puce.aruy.data.repository.CatalogoRepository
 import ec.edu.puce.aruy.data.repository.FavoritoRepository
+import ec.edu.puce.aruy.data.repository.PerfilRepository
 import ec.edu.puce.aruy.data.repository.PrestadorRepository
+import ec.edu.puce.aruy.data.repository.SuscripcionRepository
 import ec.edu.puce.aruy.data.sesion.SesionManager
 import ec.edu.puce.aruy.data.sesion.SesionStore
 import ec.edu.puce.aruy.ui.viewmodel.ActividadLocalViewModel
+import ec.edu.puce.aruy.ui.viewmodel.AjustesViewModel
+import ec.edu.puce.aruy.ui.viewmodel.AruyProViewModel
+import ec.edu.puce.aruy.ui.viewmodel.BajaCuentaViewModel
+import ec.edu.puce.aruy.ui.viewmodel.EditarPerfilViewModel
 import ec.edu.puce.aruy.ui.viewmodel.AuthViewModel
 import ec.edu.puce.aruy.ui.viewmodel.BuscarViewModel
 import ec.edu.puce.aruy.ui.viewmodel.CatalogoViewModel
@@ -53,6 +59,8 @@ class AppContainer(contexto: Context) {
 
     val authRepository = AuthRepository(cliente.authApi, sesionManager)
     val prestadorRepository = PrestadorRepository(cliente.prestadorApi, cliente.servicioApi)
+    val perfilRepository = PerfilRepository(cliente.usuarioApi, cliente.prestadorApi)
+    val suscripcionRepository = SuscripcionRepository(cliente.suscripcionApi)
     val catalogoRepository = CatalogoRepository(cliente.servicioApi, cliente.perfilApi, cliente.calificacionApi)
     val favoritoRepository = FavoritoRepository(database.favoritoDao())
     val actividadLocalRepository = ActividadLocalRepository(
@@ -65,6 +73,13 @@ class AppContainer(contexto: Context) {
     val buscarViewModelFactory: ViewModelProvider.Factory = fabricaVm { BuscarViewModel() }
     val misServiciosViewModelFactory: ViewModelProvider.Factory =
         fabricaVm { MisServiciosViewModel(prestadorRepository, sesionManager, conversorWebp, etiquetadorFotos) }
+
+    val editarPerfilViewModelFactory: ViewModelProvider.Factory =
+        fabricaVm { EditarPerfilViewModel(perfilRepository, sesionManager) }
+    val bajaCuentaViewModelFactory: ViewModelProvider.Factory =
+        fabricaVm { BajaCuentaViewModel(perfilRepository, sesionManager) }
+    val aruyProViewModelFactory: ViewModelProvider.Factory = fabricaVm { AruyProViewModel(suscripcionRepository) }
+    val ajustesViewModelFactory: ViewModelProvider.Factory = fabricaVm { AjustesViewModel(preferencias) }
 
     fun editorViewModelFactory(servicioId: String?): ViewModelProvider.Factory = fabricaVm {
         EditorServicioViewModel(servicioId, prestadorRepository, sesionManager, conversorWebp, etiquetadorFotos, borradorStore)

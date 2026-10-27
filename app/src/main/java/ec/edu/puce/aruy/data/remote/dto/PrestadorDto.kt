@@ -13,11 +13,6 @@ data class PerfilPropioDto(
     @SerializedName("disponible") val disponible: Boolean = true
 )
 
-/** Solo se envían los campos que cambian: `PATCH /perfiles/yo`. */
-data class EditarPerfilRequest(
-    @SerializedName("disponible") val disponible: Boolean? = null
-)
-
 /** Cuerpo de `POST /servicios`. Las fotos ya no van aquí: se suben después, una por una. */
 data class CrearServicioRequest(
     @SerializedName("titulo") val titulo: String,

@@ -23,5 +23,15 @@ data class UsuarioDto(
     val fotoPerfil: String? = null,
 
     @SerializedName("activo")
-    val activo: Boolean = true
+    val activo: Boolean = true,
+
+    /** Solo viene en `GET /usuarios/yo`; las demás consultas nunca devuelven el correo. */
+    @SerializedName("email")
+    val email: String? = null
+)
+
+/** Solo se envían los campos que cambian: `PATCH /usuarios/yo`. */
+data class EditarUsuarioRequest(
+    @SerializedName("nombre") val nombre: String? = null,
+    @SerializedName("telefono") val telefono: String? = null
 )

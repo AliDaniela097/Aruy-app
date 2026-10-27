@@ -1,7 +1,6 @@
 package ec.edu.puce.aruy.data.remote.api
 
 import ec.edu.puce.aruy.data.remote.dto.CrearServicioRequest
-import ec.edu.puce.aruy.data.remote.dto.EditarPerfilRequest
 import ec.edu.puce.aruy.data.remote.dto.FotoSubidaDto
 import ec.edu.puce.aruy.data.remote.dto.PerfilPropioDto
 import ec.edu.puce.aruy.data.remote.dto.ServicioDto
@@ -20,8 +19,12 @@ interface PrestadorApi {
     @GET("perfiles/yo")
     suspend fun miPerfil(): PerfilPropioDto
 
+    /**
+     * Solo viajan los campos que cambian. Va como [RequestBody] ya armado porque para vaciar la
+     * descripción hay que mandar `null`, y el convertidor de Gson descarta los `null`.
+     */
     @PATCH("perfiles/yo")
-    suspend fun editarMiPerfil(@Body cuerpo: EditarPerfilRequest): PerfilPropioDto
+    suspend fun editarMiPerfil(@Body cambios: RequestBody): PerfilPropioDto
 
     @POST("servicios")
     suspend fun crearServicio(@Body cuerpo: CrearServicioRequest): ServicioDto

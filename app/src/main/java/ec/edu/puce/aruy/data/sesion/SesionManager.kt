@@ -2,6 +2,7 @@ package ec.edu.puce.aruy.data.sesion
 
 import ec.edu.puce.aruy.domain.model.EstadoSesion
 import ec.edu.puce.aruy.domain.model.Sesion
+import ec.edu.puce.aruy.domain.model.Usuario
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,6 +51,14 @@ class SesionManager(
         token = sesion.token
         _aviso.value = null
         _estado.value = EstadoSesion.Autenticada(sesion)
+    }
+
+    /** Guarda los datos nuevos de la persona (nombre, teléfono) sin cambiar el token. */
+    suspend fun actualizarUsuario(usuario: Usuario) {
+        val actual = (_estado.value as? EstadoSesion.Autenticada)?.sesion ?: return
+        val nueva = actual.copy(usuario = usuario)
+        almacen.guardar(nueva)
+        _estado.value = EstadoSesion.Autenticada(nueva)
     }
 
     suspend fun cerrar() {
