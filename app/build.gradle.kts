@@ -1,8 +1,16 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+}
+
+// local.properties no se sube al repositorio: ahí va la IP del PC para probar con un celular físico
+val propiedadesLocales = Properties().apply {
+    val archivo = rootProject.file("local.properties")
+    if (archivo.exists()) archivo.inputStream().use { load(it) }
 }
 
 android {
@@ -19,9 +27,22 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
 
-        // 10.0.2.2 es el localhost del PC visto desde el emulador de Android
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:3000/\"")
+    // Dónde corre el backend: en el emulador o en un celular físico de la misma red
+    flavorDimensions += "entorno"
+    productFlavors {
+        create("emulador") {
+            dimension = "entorno"
+            // 10.0.2.2 es el localhost del PC visto desde el emulador de Android
+            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:3000/\"")
+        }
+        create("celular") {
+            dimension = "entorno"
+            // En local.properties: aruy.baseUrl=http://192.168.0.10:3000/ (IP del PC en la red local)
+            val urlCelular = propiedadesLocales.getProperty("aruy.baseUrl") ?: "http://192.168.0.10:3000/"
+            buildConfigField("String", "BASE_URL", "\"$urlCelular\"")
+        }
     }
 
     buildTypes {
@@ -45,9 +66,8 @@ android {
         compose = true
         buildConfig = true
     }
-
-    buildFeatures {
-        buildConfig = true
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 
@@ -59,29 +79,35 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.extended) // Íconos de la interfaz
+    implementation(libs.androidx.navigation.compose) // Navegación entre pantallas
+    implementation(libs.androidx.datastore.preferences) // Sesión (JWT) y preferencias
+    implementation(libs.androidx.exifinterface) // Orientación de las fotos antes de convertirlas a WebP
+    implementation(libs.coil.compose) // Carga de imágenes desde Supabase Storage
+    implementation(libs.mlkit.image.labeling) // Etiquetas de IA en el teléfono
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.room.runtime) // Room: persistencia local
+    implementation(libs.androidx.room.ktx) // Soporte para corrutinas y Flow
+    ksp(libs.androidx.room.compiler) // KSP: procesamiento de anotaciones de Room
+    implementation(libs.retrofit.core) // Retrofit: comunicación con API REST
+    implementation(libs.retrofit.gson) // Gson: conversión de JSON a objetos Kotlin
+    implementation(libs.okhttp.logging) // OkHttp: registro de solicitudes HTTP
+
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    implementation("com.google.mlkit:image-labeling:17.0.9")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
-    implementation(libs.androidx.room.runtime) // Room: persistencia local
-    ksp(libs.androidx.room.compiler) // KSP: procesamiento de anotaciones de Room
-    implementation(libs.androidx.room.runtime) // Room: base de datos local
-    implementation(libs.androidx.room.ktx) // Soporte para corrutinas y Flow
-    ksp(libs.androidx.room.compiler) // Procesador de anotaciones
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation(libs.retrofit.core) // Retrofit: comunicación con API REST
-    implementation(libs.retrofit.gson) // Gson: conversión de JSON a objetos Kotlin
-    implementation(libs.okhttp.logging) // OkHttp: registro de solicitudes HTTP
 }
