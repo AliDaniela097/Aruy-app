@@ -33,6 +33,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ec.edu.puce.aruy.ui.theme.AruyTheme
 
+/** "Sin conexión" si falló la red; si no, el título general de error (textos del prototipo). */
+fun tituloDeError(mensaje: String, general: String = "No pudimos cargar"): String =
+    if (ec.edu.puce.aruy.data.remote.util.ApiErrorHandler.esDeRed(mensaje)) "Sin conexión" else general
+
 /** Estado vacío del prototipo: ícono, título, texto y botón opcional. */
 @Composable
 fun EstadoVacio(

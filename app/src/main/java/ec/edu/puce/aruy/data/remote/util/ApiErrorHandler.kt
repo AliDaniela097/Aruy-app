@@ -7,15 +7,21 @@ import java.net.SocketTimeoutException
 
 object ApiErrorHandler {
 
+    const val MENSAJE_SIN_CONEXION = "No se pudo conectar con el servidor. Verifica tu conexión a internet."
+    const val MENSAJE_LENTO = "El servidor tardó demasiado en responder. Inténtalo nuevamente."
+
+    /** true si el error es de red (sin internet, servidor apagado o muy lento), no de datos. */
+    fun esDeRed(mensaje: String): Boolean = mensaje == MENSAJE_SIN_CONEXION || mensaje == MENSAJE_LENTO
+
     fun obtenerMensaje(error: Exception): String {
         return when (error) {
 
             is SocketTimeoutException -> {
-                "El servidor tardó demasiado en responder. Inténtalo nuevamente."
+                MENSAJE_LENTO
             }
 
             is IOException -> {
-                "No se pudo conectar con el servidor. Verifica tu conexión a internet."
+                MENSAJE_SIN_CONEXION
             }
 
             is HttpException -> {

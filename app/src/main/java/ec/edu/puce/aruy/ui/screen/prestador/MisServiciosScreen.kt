@@ -46,6 +46,7 @@ import coil.compose.AsyncImage
 import ec.edu.puce.aruy.ui.components.DialogoConfirmacion
 import ec.edu.puce.aruy.ui.components.EstadoCargando
 import ec.edu.puce.aruy.ui.components.EstadoVacio
+import ec.edu.puce.aruy.ui.components.tituloDeError
 import ec.edu.puce.aruy.ui.components.Pastilla
 import ec.edu.puce.aruy.ui.components.TipoPastilla
 import ec.edu.puce.aruy.ui.components.avisar
@@ -119,7 +120,7 @@ fun MisServiciosScreen(
         when {
             !ui.cargado && ui.cargando -> EstadoCargando("Cargando tus servicios…")
             ui.error != null && ui.servicios.isEmpty() -> EstadoVacio(
-                titulo = "No pudimos cargar", texto = ui.error.orEmpty(), icono = Icons.Filled.WorkOff,
+                titulo = tituloDeError(ui.error.orEmpty()), texto = ui.error.orEmpty(), icono = Icons.Filled.WorkOff,
                 textoBoton = "Reintentar", onBoton = viewModel::cargar
             )
             ui.servicios.isEmpty() -> EstadoVacio(

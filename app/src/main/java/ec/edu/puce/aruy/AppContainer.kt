@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import ec.edu.puce.aruy.data.local.BorradorStore
 import ec.edu.puce.aruy.data.local.DatabaseProvider
 import ec.edu.puce.aruy.data.local.PreferenciasStore
+import ec.edu.puce.aruy.data.red.ConexionRed
 import ec.edu.puce.aruy.data.remote.RetrofitClient
 import ec.edu.puce.aruy.data.repository.ActividadLocalRepository
 import ec.edu.puce.aruy.data.repository.AuthRepository
@@ -44,6 +45,8 @@ class AppContainer(contexto: Context) {
     private val database = DatabaseProvider.getDatabase(contexto.applicationContext)
 
     val preferencias = PreferenciasStore(contexto.applicationContext)
+
+    val conexion = ConexionRed(contexto)
 
     val sesionManager = SesionManager(SesionStore(contexto.applicationContext), alcance)
 

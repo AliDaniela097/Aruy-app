@@ -50,6 +50,7 @@ import ec.edu.puce.aruy.ui.components.Calificacion
 import ec.edu.puce.aruy.ui.components.DialogoConfirmacion
 import ec.edu.puce.aruy.ui.components.EstadoCargando
 import ec.edu.puce.aruy.ui.components.EstadoVacio
+import ec.edu.puce.aruy.ui.components.tituloDeError
 import ec.edu.puce.aruy.ui.components.FilaServicio
 import ec.edu.puce.aruy.ui.components.Pastilla
 import ec.edu.puce.aruy.ui.components.SelloVerificado
@@ -96,7 +97,7 @@ fun PrestadorPublicoScreen(
         when {
             ui.cargando && prestador == null && ui.servicios.isEmpty() -> EstadoCargando("Abriendo el perfil…", Modifier.padding(relleno))
             ui.error != null && prestador == null && ui.servicios.isEmpty() -> EstadoVacio(
-                titulo = "No pudimos abrir este perfil", texto = ui.error.orEmpty(), icono = Icons.Filled.PersonOff,
+                titulo = tituloDeError(ui.error.orEmpty(), "No pudimos abrir este perfil"), texto = ui.error.orEmpty(), icono = Icons.Filled.PersonOff,
                 modifier = Modifier.padding(relleno), textoBoton = "Reintentar", onBoton = viewModel::cargar
             )
             else -> {
