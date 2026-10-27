@@ -2,6 +2,8 @@ const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
 const { exigirToken, exigirRol } = require('../middleware/auth');
+const { duenoDeFoto } = require('../propiedad');
+const { borrarReferencias } = require('../almacenamiento');
 const { esUuid, limpiarEtiquetas } = require('../validar');
 
 const router = express.Router();
@@ -25,18 +27,9 @@ router.post('/:id/etiquetas', exigirToken, exigirRol('PRESTADOR'), async (req, r
     return res.status(400).json({ error: 'Envia etiquetas: lista de textos (maximo 20)' });
   }
   try {
-    const f = await pool.query(
-      `SELECT pp.usuario_id
-       FROM fotos_portafolio fp
-       JOIN servicios s ON s.id = fp.servicio_id
-       JOIN perfiles_prestadores pp ON pp.id = s.prestador_id
-       WHERE fp.id = $1`,
-      [req.params.id]
-    );
-    if (f.rows.length === 0) return res.status(404).json({ error: 'Foto no encontrada' });
-    if (String(f.rows[0].usuario_id) !== req.usuario.id) {
-      return res.status(403).json({ error: 'Esa foto no es de tu servicio' });
-    }
+    const dueno = await duenoDeFoto(pool, req.params.id);
+    if (dueno === null) return res.status(404).json({ error: 'Foto no encontrada' });
+    if (dueno !== req.usuario.id) return res.status(403).json({ error: 'Esa foto no es de tu servicio' });
     for (const e of etiquetas) {
       await pool.query(
         'INSERT INTO etiquetas_fotos (id, foto_id, etiqueta) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
@@ -47,6 +40,23 @@ router.post('/:id/etiquetas', exigirToken, exigirRol('PRESTADOR'), async (req, r
   } catch (e) {
     console.error(e.message);
     res.status(500).json({ error: 'Error al guardar etiquetas' });
+  }
+});
+
+// Borrar una foto de mi servicio (sus etiquetas se borran con ella: ON DELETE CASCADE)
+router.delete('/:id', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
+  if (!esUuid(req.params.id)) return res.status(400).json({ error: 'Id invalido' });
+  try {
+    const dueno = await duenoDeFoto(pool, req.params.id);
+    if (dueno === null) return res.status(404).json({ error: 'Foto no encontrada' });
+    if (dueno !== req.usuario.id) return res.status(403).json({ error: 'Esa foto no es de tu servicio' });
+    const foto = await pool.query('SELECT referencia_imagen FROM fotos_portafolio WHERE id = $1', [req.params.id]);
+    await pool.query('DELETE FROM fotos_portafolio WHERE id = $1', [req.params.id]);
+    await borrarReferencias(foto.rows.map((f) => f.referencia_imagen));
+    res.status(204).end();
+  } catch (e) {
+    console.error(e.message);
+    res.status(500).json({ error: 'Error al borrar la foto' });
   }
 });
 

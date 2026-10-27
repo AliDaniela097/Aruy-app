@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const { textoValido, esEmail, passwordValida, ROLES } = require('../validar');
+const { urlPublica } = require('../almacenamiento');
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ const COLUMNAS_PUBLICAS = 'id, nombre, telefono, rol, estado_verificacion, foto_
 // Se compara contra este hash cuando el correo no existe, para que tarde lo mismo
 const HASH_FALSO = bcrypt.hashSync('contrasena-falsa-para-igualar-tiempos', 10);
 
-const aUsuario = (u) => ({ ...u, id: String(u.id), telefono: u.telefono ?? '' });
+const aUsuario = (u) => ({ ...u, id: String(u.id), telefono: u.telefono ?? '', foto_perfil: urlPublica(u.foto_perfil) });
 
 function crearToken(u) {
   return jwt.sign({ rol: u.rol }, process.env.JWT_SECRET, {
@@ -25,7 +26,7 @@ function crearToken(u) {
 // porque en la base los servicios cuelgan del perfil y no del usuario.
 router.post('/registro', async (req, res) => {
   const {
-    nombre, telefono, email, password, rol, foto_perfil,
+    nombre, telefono, email, password, rol,
     oficio_principal, zona_cobertura, descripcion_profesional, anios_experiencia,
   } = req.body || {};
 
@@ -69,7 +70,7 @@ router.post('/registro', async (req, res) => {
          (id, nombre, telefono, rol, estado_verificacion, foto_perfil, activo, fecha_registro, email, password_hash)
        VALUES ($1, $2, $3, $4, 'NO_SOLICITADA', $5, true, NOW(), $6, $7)
        RETURNING ${COLUMNAS_PUBLICAS}`,
-      [crypto.randomUUID(), nombre.trim(), telefono.trim(), rol, foto_perfil ?? null, correo, hash]
+      [crypto.randomUUID(), nombre.trim(), telefono.trim(), rol, null, correo, hash]
     );
     const u = r.rows[0];
 
