@@ -6,6 +6,8 @@ const MAX_BYTES = 500 * 1024;
 const MAX_PIXELES = 40_000_000; // protege la memoria: rechaza imagenes gigantes (ej. mas de 6000 x 6000)
 const CALIDADES = [80, 75, 70, 60, 50]; // se empieza en 80 y solo se baja si no cabe en 500 KB
 const LADOS = [LADO_MAX, 1024, 800];
+// Foto de perfil: mas chica que las del portafolio
+const PERFIL = { ladoMax: 512, maxBytes: 200 * 1024 };
 
 class ErrorImagen extends Error {
   constructor(status, mensaje) {
@@ -28,7 +30,7 @@ function cargarSharp() {
 
 const sharpDisponible = () => cargarSharp() !== null;
 
-async function normalizarAWebp(buffer) {
+async function normalizarAWebp(buffer, { ladoMax = LADO_MAX, maxBytes = MAX_BYTES } = {}) {
   const sharp = cargarSharp();
   if (!sharp) {
     throw new ErrorImagen(503, 'Falta la libreria sharp en el servidor (npm install sharp)');
@@ -46,7 +48,8 @@ async function normalizarAWebp(buffer) {
     throw new ErrorImagen(400, 'La imagen debe ser JPG, PNG o WEBP');
   }
 
-  for (const lado of LADOS) {
+  const lados = ladoMax === LADO_MAX ? LADOS : [ladoMax, Math.round(ladoMax * 0.8), Math.round(ladoMax * 0.625)];
+  for (const lado of lados) {
     for (const calidad of CALIDADES) {
       let salida;
       try {
@@ -58,7 +61,7 @@ async function normalizarAWebp(buffer) {
       } catch {
         throw new ErrorImagen(400, 'No se pudo procesar la imagen');
       }
-      if (salida.data.length <= MAX_BYTES) {
+      if (salida.data.length <= maxBytes) {
         return {
           buffer: salida.data,
           ancho: salida.info.width,
@@ -69,7 +72,7 @@ async function normalizarAWebp(buffer) {
       }
     }
   }
-  throw new ErrorImagen(422, 'No se pudo reducir la imagen a 500 KB; prueba con una foto mas pequena');
+  throw new ErrorImagen(422, `No se pudo reducir la imagen a ${Math.round(maxBytes / 1024)} KB; prueba con una foto mas pequena`);
 }
 
-module.exports = { normalizarAWebp, sharpDisponible, ErrorImagen, LADO_MAX, MAX_BYTES };
+module.exports = { normalizarAWebp, sharpDisponible, ErrorImagen, LADO_MAX, MAX_BYTES, PERFIL };

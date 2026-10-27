@@ -2,7 +2,7 @@
 // La clave secreta SOLO vive en el .env del servidor: la app nunca la ve.
 // En la base (fotos_portafolio.referencia_imagen) se guarda solo la RUTA dentro del bucket: <id_servicio>/<id>.webp
 const TIPOS_ENTRADA = ['image/jpeg', 'image/png', 'image/webp'];
-const RUTA_VALIDA = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webp$/i;
+const RUTA_VALIDA = /^(perfiles\/)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webp$/i;
 
 function config() {
   // Acepta la URL del proyecto con o sin "/rest/v1/": solo se usa el dominio

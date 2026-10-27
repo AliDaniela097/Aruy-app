@@ -926,6 +926,79 @@ components.schemas.FotoSubida = {
 components.schemas.Foto.properties.url = { type: 'string', nullable: true, description: 'Dirección pública para mostrar la foto' };
 components.schemas.Foto.properties.referencia_imagen.description = 'Lo guardado en la base: la ruta dentro del bucket';
 
+// ---- Perfil público del prestador y foto de perfil ----
+paths['/perfiles/{id}'] = {
+  get: {
+    tags: ['Perfiles'],
+    summary: 'Perfil público de un prestador',
+    description:
+      'Público (no pide token). El `id` es el `prestador_id` de los servicios, es decir, el id del **perfil**. ' +
+      'Devuelve nombre, teléfono, número listo para WhatsApp (`https://wa.me/{whatsapp}`), foto y calificación promedio. ' +
+      'Si el prestador se dio de baja, responde 404.',
+    parameters: [idPath('Id del perfil del prestador (prestador_id de un servicio)')],
+    responses: {
+      200: { description: 'Perfil del prestador', content: json(ref('PerfilPublico')) },
+      400: errorRespuesta('Id con formato inválido'),
+      404: errorRespuesta('Prestador no encontrado'),
+    },
+  },
+};
+paths['/usuarios/yo/foto'] = {
+  post: {
+    tags: ['Usuarios'],
+    summary: 'Subir mi foto de perfil',
+    description:
+      'El cuerpo es **la imagen tal cual** (JPG, PNG o WEBP, hasta 5 MB), con su `Content-Type`. ' +
+      'El servidor la convierte a **WebP** (máximo 512 px por el lado largo y 200 KB), la guarda en Supabase Storage y registra solo su ruta. ' +
+      'Reemplaza la foto anterior (y borra su archivo). Sin ubicación GPS ni EXIF. Para quitarla: `PATCH /usuarios/yo` con `{"foto_perfil": null}`.',
+    security: conToken,
+    requestBody: {
+      required: true,
+      content: { 'image/webp': { schema: imagenBin }, 'image/jpeg': { schema: imagenBin }, 'image/png': { schema: imagenBin } },
+    },
+    responses: {
+      200: { description: 'Foto guardada. `foto_perfil` ya es la dirección para mostrarla', content: json(ref('UsuarioConFoto')) },
+      400: errorRespuesta('El archivo no es una imagen válida'),
+      401: e401,
+      413: errorRespuesta('La imagen pesa más de 5 MB'),
+      415: errorRespuesta('Falta la imagen o su Content-Type no es image/jpeg, image/png o image/webp'),
+      422: errorRespuesta('No se pudo reducir la imagen a 200 KB'),
+      429: errorRespuesta('Demasiadas imágenes en poco tiempo'),
+      502: errorRespuesta('No se pudo guardar la imagen en el almacenamiento'),
+      503: errorRespuesta('El almacenamiento o el procesamiento de imágenes no están configurados en el servidor'),
+    },
+  },
+};
+paths['/usuarios/yo'].patch.description = 'Solo cambia los campos que envíes. La foto de perfil se cambia con `POST /usuarios/yo/foto`; aquí solo se puede quitar enviando `foto_perfil: null`.';
+components.schemas.UsuarioEditar.properties.foto_perfil = { type: 'string', nullable: true, enum: [null], description: 'Solo se acepta null (quita la foto). Para ponerla usa POST /usuarios/yo/foto' };
+delete components.schemas.Registro.properties.foto_perfil;
+components.schemas.Usuario.properties.foto_perfil = { type: 'string', nullable: true, description: 'Dirección pública para mostrar la foto de perfil (WebP), o null' };
+components.schemas.UsuarioConFoto = {
+  allOf: [
+    ref('Usuario'),
+    { type: 'object', properties: { formato: { type: 'string', example: 'webp' }, ancho: { type: 'integer' }, alto: { type: 'integer' }, bytes: { type: 'integer' }, calidad: { type: 'integer' } } },
+  ],
+};
+components.schemas.PerfilPublico = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid', description: 'Id del perfil (= prestador_id de los servicios)' },
+    usuario_id: { type: 'string', format: 'uuid' },
+    nombre: { type: 'string' },
+    telefono: { type: 'string', example: '0991234567' },
+    whatsapp: { type: 'string', nullable: true, description: 'Solo dígitos con código de Ecuador, para https://wa.me/{whatsapp}. null si el teléfono no es un celular ecuatoriano', example: '593991234567' },
+    foto_perfil: { type: 'string', nullable: true, description: 'Dirección pública de la foto (WebP), o null' },
+    estado_verificacion: { type: 'string', enum: ['NO_SOLICITADA', 'PENDIENTE', 'VERIFICADA', 'RECHAZADA'] },
+    oficio_principal: { type: 'string' },
+    descripcion_profesional: { type: 'string', nullable: true },
+    zona_cobertura: { type: 'string' },
+    anios_experiencia: { type: 'integer', nullable: true },
+    disponible: { type: 'boolean' },
+    calificacion_promedio: { type: 'number', nullable: true, description: 'De 1 a 5 con un decimal; null si todavía no tiene calificaciones', example: 4.5 },
+    total_calificaciones: { type: 'integer' },
+  },
+};
+
 module.exports = {
   openapi: '3.0.3',
   info,

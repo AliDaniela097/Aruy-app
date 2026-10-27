@@ -43,6 +43,7 @@ app.get('/health', (req, res) => res.json({ estado: 'ok' }));
 app.use('/auth', limiteAuth, require('./routes/auth'));
 // Subir fotos (se procesan con sharp): limite de subidas por IP
 app.post('/servicios/:id/fotos', limiteImagenes);
+app.post('/usuarios/yo/foto', limiteImagenes);
 app.use('/servicios', require('./routes/servicios'));
 app.use('/usuarios', require('./routes/usuarios'));
 app.use('/perfiles', require('./routes/perfiles'));

@@ -2,7 +2,8 @@ const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
 const { exigirToken, exigirRol } = require('../middleware/auth');
-const { textoValido } = require('../validar');
+const { textoValido, esUuid } = require('../validar');
+const { urlPublica } = require('../almacenamiento');
 
 const router = express.Router();
 
@@ -68,6 +69,55 @@ router.patch('/yo', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
   } catch (e) {
     console.error(e.message);
     res.status(500).json({ error: 'Error al editar el perfil' });
+  }
+});
+
+// Numero para abrir WhatsApp (https://wa.me/<numero>): solo digitos, con el codigo de Ecuador (593).
+// Sirve para celulares ecuatorianos (09XXXXXXXX o +593 9XXXXXXXX); si no se puede calcular, null.
+function aWhatsapp(telefono) {
+  const d = String(telefono || '').replace(/\D/g, '');
+  if (/^593\d{9}$/.test(d)) return d;
+  if (/^0\d{9}$/.test(d)) return `593${d.slice(1)}`;
+  return null;
+}
+
+// Perfil PUBLICO de un prestador. El id es el prestador_id de los servicios (el id del PERFIL).
+// No pide token: la app lo usa para mostrar el nombre, la foto, la calificacion y el boton de WhatsApp.
+router.get('/:id', async (req, res) => {
+  if (!esUuid(req.params.id)) return res.status(400).json({ error: 'Id invalido' });
+  try {
+    const r = await pool.query(
+      `SELECT pp.id, pp.usuario_id, pp.oficio_principal, pp.descripcion_profesional, pp.zona_cobertura,
+              pp.anios_experiencia, pp.disponible, u.nombre, u.telefono, u.foto_perfil, u.estado_verificacion
+       FROM perfiles_prestadores pp JOIN usuarios u ON u.id = pp.usuario_id
+       WHERE pp.id = $1 AND u.activo = true`,
+      [req.params.id]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ error: 'Prestador no encontrado' });
+    const c = await pool.query(
+      'SELECT COUNT(*)::int AS total, AVG(puntuacion)::float8 AS promedio FROM calificaciones WHERE perfil_prestador_id = $1',
+      [req.params.id]
+    );
+    const p = r.rows[0];
+    res.json({
+      id: String(p.id),
+      usuario_id: String(p.usuario_id),
+      nombre: p.nombre,
+      telefono: p.telefono ?? '',
+      whatsapp: aWhatsapp(p.telefono),
+      foto_perfil: urlPublica(p.foto_perfil),
+      estado_verificacion: p.estado_verificacion,
+      oficio_principal: p.oficio_principal,
+      descripcion_profesional: p.descripcion_profesional,
+      zona_cobertura: p.zona_cobertura,
+      anios_experiencia: p.anios_experiencia,
+      disponible: p.disponible,
+      calificacion_promedio: c.rows[0].total ? Math.round(Number(c.rows[0].promedio) * 10) / 10 : null,
+      total_calificaciones: c.rows[0].total,
+    });
+  } catch (e) {
+    console.error(e.message);
+    res.status(500).json({ error: 'Error al consultar el prestador' });
   }
 });
 
