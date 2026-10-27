@@ -31,11 +31,20 @@ class CatalogoRepositoryTest {
           "disponible":true,"calificacion_promedio":4.8,"total_calificaciones":12}]
     """.trimIndent()
 
-    private fun preparar(perfilesDisponibles: Boolean) {
+    private val perfilUno = """
+        {"id":"p1","usuario_id":"u1","nombre":"Luis Quishpe","telefono":"0998765432",
+         "estado_verificacion":"VERIFICADA","oficio_principal":"Plomero","zona_cobertura":"Sur",
+         "disponible":true,"calificacion_promedio":4.8,"total_calificaciones":12}
+    """.trimIndent()
+
+    private fun preparar(perfilesDisponibles: Boolean, perfilIndividual: Boolean = false) {
         servidor = MockWebServer().apply {
             dispatcher = object : Dispatcher() {
                 override fun dispatch(request: RecordedRequest): MockResponse = when (request.path) {
                     "/servicios" -> MockResponse().setBody(servicios)
+                    "/perfiles/p1" ->
+                        if (perfilIndividual) MockResponse().setBody(perfilUno)
+                        else MockResponse().setResponseCode(404).setBody("""{"error":"Prestador no encontrado"}""")
                     "/perfiles" ->
                         if (perfilesDisponibles) MockResponse().setBody(perfiles)
                         else MockResponse().setResponseCode(404).setBody("""{"error":"Ruta no encontrada"}""")
@@ -83,6 +92,16 @@ class CatalogoRepositoryTest {
         assertEquals(2, catalogo.size)
         assertNull(catalogo[0].prestador)
         assertNull(repositorio.prestador("p1"))
+    }
+
+    @Test
+    fun sin_lista_de_perfiles_pide_cada_prestador_por_su_id() = runBlocking {
+        preparar(perfilesDisponibles = false, perfilIndividual = true)
+
+        val catalogo = repositorio.cargarCatalogo()
+
+        assertEquals("Luis Quishpe", catalogo.first { it.id == "s1" }.nombrePrestador)
+        assertNull(catalogo.first { it.id == "s2" }.prestador)
     }
 
     @Test
