@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aruy · Que te encuentren clientes nuevos</title>
+<meta name="description" content="Aruy conecta a trabajadores independientes de oficios en Quito con personas que buscan servicios confiables, rápidos y sin intermediarios.">
+<style>
+:root{--bg:#FBF7F0;--fg:#1E1B16;--mut:#5C554A;--pri:#B4472B;--pri2:#8E3320;--card:#FFFFFF;--line:#E6DDCE;--acc:#2F6B5E}
+@media (prefers-color-scheme:dark){:root{--bg:#17140F;--fg:#F3EDE2;--mut:#B9AF9E;--pri:#E4825F;--pri2:#F0A184;--card:#211D16;--line:#3A332A;--acc:#6FC0AE}}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.6 "Atkinson Hyperlegible",system-ui,Segoe UI,Roboto,Arial,sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:0 20px}
+header.top{padding:18px 0}.brand{font-weight:800;font-size:22px;letter-spacing:.5px;color:var(--pri);text-decoration:none}
+.weave{height:10px;background:repeating-linear-gradient(90deg,var(--pri) 0 14px,var(--acc) 14px 28px,#E0B13A 28px 42px)}
+h1{font-size:clamp(32px,6vw,52px);line-height:1.1;margin:.3em 0 .4em}
+h2{font-size:clamp(24px,4vw,32px);margin:0 0 .6em}
+.lead{font-size:clamp(18px,2.4vw,22px);color:var(--mut);max-width:40ch}
+.btn{display:inline-block;background:var(--pri);color:#fff;text-decoration:none;font-weight:700;padding:16px 26px;border-radius:14px;min-height:48px;margin-top:12px}
+.btn:hover,.btn:focus{background:var(--pri2)}
+section{padding:44px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px}
+.stats{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.big{font-size:44px;font-weight:800;color:var(--pri);line-height:1}
+.steps{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));counter-reset:s}
+.steps .card{counter-increment:s}.steps .card:before{content:counter(s);display:inline-grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--acc);color:#fff;font-weight:800;margin-bottom:10px}
+small,.note{color:var(--mut);font-size:14px}
+footer{border-top:1px solid var(--line);padding:26px 0;color:var(--mut);font-size:15px}
+footer a,a{color:var(--pri)}
+.cta{background:var(--card);border-block:1px solid var(--line);text-align:center}
+</style></head><body>
+<div class="weave" aria-hidden="true"></div>
+<header class="top"><div class="wrap"><a class="brand" href="#">ARUY</a></div></header>
+<main>
+<section class="wrap" aria-labelledby="t">
+ <h1 id="t">Que te encuentren los clientes nuevos.</h1>
+ <p class="lead">Aruy conecta a trabajadores independientes de oficios en Quito con personas que buscan servicios confiables, rápidos y sin intermediarios.</p>
+ <a class="btn" href="https://play.google.com/apps/testing/ec.edu.puce.aruy">Probar Aruy en Android</a>
+ <p class="note">Prueba cerrada en Google Play. Publicarse es gratis. Aruy Pro, con más visibilidad, es un plan opcional que en esta prueba se simula: no se cobra dinero real.</p>
+</section>
+<section class="wrap" aria-labelledby="p">
+ <h2 id="p">El problema: sin el boca a boca, no hay clientes</h2>
+ <p>Plomeros, soldadores, albañiles, estilistas y otros trabajadores independientes de Quito dependen de las recomendaciones de sus conocidos. Cuando esa red no alcanza, pasan semanas sin trabajo. Las plataformas que existen les resultan complicadas, están en otro idioma o les piden pagar para publicar.</p>
+ <div class="stats">
+  <div class="card"><div class="big">13 de 40</div><p>personas encuestadas en Quito dicen que las plataformas actuales son complicadas o poco efectivas.</p></div>
+  <div class="card"><div class="big">USD 100 a 300</div><p>es lo que dos trabajadores entrevistados dicen haber perdido por no tener trabajos nuevos.</p></div>
+  <div class="card"><div class="big">39 de 40</div><p>publicarían su perfil si la prueba inicial es gratuita.</p></div>
+ </div>
+ <p class="note">Fuente: 12 entrevistas y 40 encuestas del equipo FrameFlow, septiembre de 2026. Muestra por conveniencia: mide intención declarada, no uso real.</p>
+</section>
+<section class="wrap" aria-labelledby="c">
+ <h2 id="c">Cómo funciona en 3 pasos</h2>
+ <div class="steps">
+  <div class="card"><h3>Crea tu cuenta</h3><p>Regístrate en dos pasos y elige si ofreces o buscas un servicio.</p></div>
+  <div class="card"><h3>Publica o busca</h3><p>El prestador sube fotos de sus trabajos. El contratante busca por categoría.</p></div>
+  <div class="card"><h3>Habla por WhatsApp</h3><p>Un toque abre la conversación con el mensaje ya escrito. Sin intermediarios.</p></div>
+ </div>
+</section>
+<section class="cta"><div class="wrap" style="padding-block:40px">
+ <h2>Únete a la prueba cerrada</h2>
+ <p>Necesitas una cuenta de Google en tu celular Android. El enlace funciona cuando tu correo ya está en la lista de testers; si no, escríbenos a <a href="mailto:aruy.ec@gmail.com">aruy.ec@gmail.com</a>.</p>
+ <a class="btn" href="https://play.google.com/apps/testing/ec.edu.puce.aruy">Unirme y descargar</a>
+</div></section>
+<section class="wrap" aria-labelledby="e"><h2 id="e">Evidencia y equipo</h2>
+ <p class="note">Por ahora Aruy se prueba en Quito y solo en Android. Las pruebas con usuarios reales y la presentación del equipo se publican después del Sprint 2. Código abierto con licencia MIT: <a href="https://github.com/FrameFlow-app/Aruy-app">github.com/FrameFlow-app/Aruy-app</a>.</p></section>
+</main>
+<footer><div class="wrap">Aruy · Equipo FrameFlow · PUCE, Quito. <a href="privacidad.html">Política de privacidad</a></div></footer>
+</body></html>
