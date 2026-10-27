@@ -13,7 +13,12 @@ object DatabaseProvider {
                 context.applicationContext,
                 AruyDatabase::class.java,
                 "aruy_local_db"
-            ).build()
+            )
+                // La versión 1 solo tenía favoritos de prueba sin cuenta; al pasar a la versión 2
+                // (datos por cuenta) se empieza de cero. Desde la primera versión publicada se
+                // deben escribir migraciones reales.
+                .fallbackToDestructiveMigration()
+                .build()
 
             INSTANCE = instance
             instance

@@ -1,0 +1,237 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "e9acad6f728c1f999252f9c13f0d1699",
+    "entities": [
+      {
+        "tableName": "favoritos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`usuarioId` TEXT NOT NULL, `servicioId` TEXT NOT NULL, `fechaGuardado` INTEGER NOT NULL, PRIMARY KEY(`usuarioId`, `servicioId`))",
+        "fields": [
+          {
+            "fieldPath": "usuarioId",
+            "columnName": "usuarioId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "servicioId",
+            "columnName": "servicioId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fechaGuardado",
+            "columnName": "fechaGuardado",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "usuarioId",
+            "servicioId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "bloqueados",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`usuarioId` TEXT NOT NULL, `prestadorId` TEXT NOT NULL, `nombre` TEXT NOT NULL, `fecha` INTEGER NOT NULL, PRIMARY KEY(`usuarioId`, `prestadorId`))",
+        "fields": [
+          {
+            "fieldPath": "usuarioId",
+            "columnName": "usuarioId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "prestadorId",
+            "columnName": "prestadorId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nombre",
+            "columnName": "nombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fecha",
+            "columnName": "fecha",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "usuarioId",
+            "prestadorId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "contactos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `usuarioId` TEXT NOT NULL, `prestadorId` TEXT NOT NULL, `servicioId` TEXT, `nombre` TEXT NOT NULL, `mensaje` TEXT NOT NULL, `fecha` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usuarioId",
+            "columnName": "usuarioId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "prestadorId",
+            "columnName": "prestadorId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "servicioId",
+            "columnName": "servicioId",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "nombre",
+            "columnName": "nombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mensaje",
+            "columnName": "mensaje",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fecha",
+            "columnName": "fecha",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "reportes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `usuarioId` TEXT NOT NULL, `tipo` TEXT NOT NULL, `objetivoId` TEXT NOT NULL, `objetivo` TEXT NOT NULL, `motivo` TEXT NOT NULL, `detalle` TEXT, `fecha` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usuarioId",
+            "columnName": "usuarioId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "objetivoId",
+            "columnName": "objetivoId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "objetivo",
+            "columnName": "objetivo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "motivo",
+            "columnName": "motivo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detalle",
+            "columnName": "detalle",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "fecha",
+            "columnName": "fecha",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "vistos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`usuarioId` TEXT NOT NULL, `servicioId` TEXT NOT NULL, `fecha` INTEGER NOT NULL, PRIMARY KEY(`usuarioId`, `servicioId`))",
+        "fields": [
+          {
+            "fieldPath": "usuarioId",
+            "columnName": "usuarioId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "servicioId",
+            "columnName": "servicioId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fecha",
+            "columnName": "fecha",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "usuarioId",
+            "servicioId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e9acad6f728c1f999252f9c13f0d1699')"
+    ]
+  }
+}

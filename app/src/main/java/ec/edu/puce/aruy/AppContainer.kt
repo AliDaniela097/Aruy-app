@@ -1,21 +1,21 @@
 package ec.edu.puce.aruy
 
 import android.content.Context
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import ec.edu.puce.aruy.data.local.DatabaseProvider
 import ec.edu.puce.aruy.data.local.PreferenciasStore
 import ec.edu.puce.aruy.data.remote.RetrofitClient
+import ec.edu.puce.aruy.data.repository.ActividadLocalRepository
 import ec.edu.puce.aruy.data.repository.AuthRepository
+import ec.edu.puce.aruy.data.repository.CatalogoRepository
 import ec.edu.puce.aruy.data.repository.FavoritoRepository
-import ec.edu.puce.aruy.data.repository.ServicioRepository
-import ec.edu.puce.aruy.data.repository.UsuarioRepository
 import ec.edu.puce.aruy.data.sesion.SesionManager
 import ec.edu.puce.aruy.data.sesion.SesionStore
+import ec.edu.puce.aruy.ui.viewmodel.ActividadLocalViewModel
 import ec.edu.puce.aruy.ui.viewmodel.AuthViewModel
-import ec.edu.puce.aruy.ui.viewmodel.FavoritoViewModel
-import ec.edu.puce.aruy.ui.viewmodel.ServicioViewModelFactory
-import ec.edu.puce.aruy.ui.viewmodel.UsuarioViewModelFactory
+import ec.edu.puce.aruy.ui.viewmodel.BuscarViewModel
+import ec.edu.puce.aruy.ui.viewmodel.CatalogoViewModel
+import ec.edu.puce.aruy.ui.viewmodel.fabricaVm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -40,19 +40,19 @@ class AppContainer(contexto: Context) {
         alExpirar = sesionManager::expirar
     )
 
-    val favoritoRepository = FavoritoRepository(database.favoritoDao())
-    val servicioRepository = ServicioRepository(cliente.servicioApi)
-    val usuarioRepository = UsuarioRepository(cliente.usuarioApi)
     val authRepository = AuthRepository(cliente.authApi, sesionManager)
+    val catalogoRepository = CatalogoRepository(cliente.servicioApi, cliente.perfilApi, cliente.calificacionApi)
+    val favoritoRepository = FavoritoRepository(database.favoritoDao())
+    val actividadLocalRepository = ActividadLocalRepository(
+        database.bloqueadoDao(), database.contactoDao(), database.reporteDao(), database.vistoDao()
+    )
 
-    val favoritoViewModelFactory = object : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            FavoritoViewModel(favoritoRepository) as T
-    }
-    val usuarioViewModelFactory = UsuarioViewModelFactory(usuarioRepository)
-    val servicioViewModelFactory = ServicioViewModelFactory(servicioRepository, usuarioRepository)
     val authViewModelFactory = AuthViewModel.fabrica(authRepository, sesionManager)
+    val catalogoViewModelFactory: ViewModelProvider.Factory =
+        fabricaVm { CatalogoViewModel(catalogoRepository, actividadLocalRepository, sesionManager) }
+    val buscarViewModelFactory: ViewModelProvider.Factory = fabricaVm { BuscarViewModel() }
+    val actividadLocalViewModelFactory: ViewModelProvider.Factory =
+        fabricaVm { ActividadLocalViewModel(favoritoRepository, actividadLocalRepository, sesionManager) }
 
     init {
         // Lee la sesión guardada; hasta entonces el estado es "Cargando" y se ve el splash

@@ -2,6 +2,8 @@ package ec.edu.puce.aruy.data.remote
 
 import ec.edu.puce.aruy.BuildConfig
 import ec.edu.puce.aruy.data.remote.api.AuthApi
+import ec.edu.puce.aruy.data.remote.api.CalificacionApi
+import ec.edu.puce.aruy.data.remote.api.PerfilApi
 import ec.edu.puce.aruy.data.remote.api.ServicioApi
 import ec.edu.puce.aruy.data.remote.api.UsuarioApi
 import okhttp3.OkHttpClient
@@ -45,4 +47,8 @@ class RetrofitClient(
     val usuarioApi: UsuarioApi = retrofit.create(UsuarioApi::class.java)
 
     val servicioApi: ServicioApi = retrofit.create(ServicioApi::class.java)
+
+    val perfilApi: PerfilApi = retrofit.create(PerfilApi::class.java)
+
+    val calificacionApi: CalificacionApi = retrofit.create(CalificacionApi::class.java)
 }
