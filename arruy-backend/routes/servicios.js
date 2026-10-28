@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
+const { registrarError } = require('../registro');
 const { exigirToken, exigirRol } = require('../middleware/auth');
 const { duenoDeServicio } = require('../propiedad');
 const { normalizarAWebp, sharpDisponible, ErrorImagen } = require('../imagen');
@@ -35,7 +36,7 @@ router.get('/', async (req, res) => {
       : await pool.query(`SELECT ${COLUMNAS} FROM servicios ORDER BY titulo`);
     res.json(r.rows.map(aServicio));
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al consultar servicios' });
   }
 });
@@ -62,7 +63,7 @@ router.get('/:id/fotos', async (req, res) => {
       }))
     );
   } catch (err) {
-    console.error(err.message);
+    registrarError(err);
     res.status(500).json({ error: 'Error al consultar las fotos' });
   }
 });
@@ -74,7 +75,7 @@ router.get('/:id', async (req, res) => {
     if (r.rows.length === 0) return res.status(404).json({ error: 'Servicio no encontrado' });
     res.json(aServicio(r.rows[0]));
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al consultar el servicio' });
   }
 });
@@ -110,7 +111,7 @@ router.post('/', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
     );
     res.status(201).json(aServicio(s.rows[0]));
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al crear el servicio' });
   }
 });
@@ -164,7 +165,7 @@ router.patch('/:id', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
     );
     res.json(aServicio(r.rows[0]));
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al editar el servicio' });
   }
 });
@@ -182,7 +183,7 @@ router.delete('/:id', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
     await borrarReferencias(fotos.rows.map((f) => f.referencia_imagen));
     res.status(204).end();
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al borrar el servicio' });
   }
 });
@@ -214,7 +215,7 @@ async function verificarDuenoYCupo(req, res, next) {
     }
     next();
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al verificar el servicio' });
   }
 }
@@ -253,7 +254,7 @@ router.post(
       img = await normalizarAWebp(req.body);
     } catch (e) {
       if (e instanceof ErrorImagen) return res.status(e.status).json({ error: e.message });
-      console.error(e.message);
+      registrarError(e);
       return res.status(500).json({ error: 'Error al procesar la imagen' });
     }
 
@@ -261,7 +262,7 @@ router.post(
     try {
       await subirWebp(img.buffer, ruta);
     } catch (e) {
-      console.error(e.message);
+      registrarError(e);
       return res.status(502).json({ error: 'No se pudo guardar la imagen en el almacenamiento' });
     }
 
@@ -306,7 +307,7 @@ router.post(
       if (e instanceof ServicioLleno) {
         return res.status(409).json({ error: `Un servicio admite como maximo ${MAX_FOTOS} fotos` });
       }
-      console.error(e.message);
+      registrarError(e);
       res.status(500).json({ error: 'Error al registrar la foto' });
     } finally {
       client.release();

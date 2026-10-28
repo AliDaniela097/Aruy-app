@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
+const { registrarError } = require('../registro');
 const { textoValido, esEmail, passwordValida, ROLES } = require('../validar');
 const { urlPublica } = require('../almacenamiento');
 
@@ -95,7 +96,7 @@ router.post('/registro', async (req, res) => {
     if (e.code === '23505') {
       return res.status(409).json({ error: 'El telefono o el correo ya estan registrados' });
     }
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al registrar el usuario' });
   } finally {
     client.release();
@@ -127,7 +128,7 @@ router.post('/login', async (req, res) => {
       perfil_prestador_id: p.rows[0] ? String(p.rows[0].id) : null,
     });
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al iniciar sesion' });
   }
 });
