@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
+const { registrarError } = require('../registro');
 const { exigirToken, exigirRol } = require('../middleware/auth');
 const { textoValido, esUuid } = require('../validar');
 const { urlPublica } = require('../almacenamiento');
@@ -20,7 +21,7 @@ router.get('/yo', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
     if (r.rows.length === 0) return res.status(404).json({ error: 'Todavia no tienes perfil de prestador' });
     res.json(aPerfil(r.rows[0]));
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al consultar el perfil' });
   }
 });
@@ -67,7 +68,7 @@ router.patch('/yo', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
     if (r.rows.length === 0) return res.status(404).json({ error: 'Todavia no tienes perfil de prestador' });
     res.json(aPerfil(r.rows[0]));
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al editar el perfil' });
   }
 });
@@ -116,7 +117,7 @@ router.get('/:id', async (req, res) => {
       total_calificaciones: c.rows[0].total,
     });
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al consultar el prestador' });
   }
 });
@@ -147,7 +148,7 @@ router.post('/', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
     res.status(201).json(aPerfil(r.rows[0]));
   } catch (e) {
     if (e.code === '23505') return res.status(409).json({ error: 'Ya tienes un perfil de prestador' });
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al crear el perfil' });
   }
 });

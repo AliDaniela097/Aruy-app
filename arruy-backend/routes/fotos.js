@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
+const { registrarError } = require('../registro');
 const { exigirToken, exigirRol } = require('../middleware/auth');
 const { duenoDeFoto } = require('../propiedad');
 const { borrarReferencias } = require('../almacenamiento');
@@ -14,7 +15,7 @@ router.get('/:id/etiquetas', async (req, res) => {
     const r = await pool.query('SELECT etiqueta FROM etiquetas_fotos WHERE foto_id = $1', [req.params.id]);
     res.json(r.rows.map((x) => x.etiqueta));
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al consultar etiquetas' });
   }
 });
@@ -38,7 +39,7 @@ router.post('/:id/etiquetas', exigirToken, exigirRol('PRESTADOR'), async (req, r
     }
     res.status(201).json({ foto_id: req.params.id, etiquetas });
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al guardar etiquetas' });
   }
 });
@@ -55,7 +56,7 @@ router.delete('/:id', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
     await borrarReferencias(foto.rows.map((f) => f.referencia_imagen));
     res.status(204).end();
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al borrar la foto' });
   }
 });

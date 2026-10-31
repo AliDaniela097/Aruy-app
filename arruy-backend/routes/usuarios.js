@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
+const { registrarError } = require('../registro');
 const { exigirToken } = require('../middleware/auth');
 const { normalizarAWebp, sharpDisponible, ErrorImagen, PERFIL } = require('../imagen');
 const { config, detectarTipo, subirWebp, urlPublica, borrarReferencias, TIPOS_ENTRADA } = require('../almacenamiento');
@@ -24,7 +25,7 @@ router.get('/yo', exigirToken, async (req, res) => {
     if (r.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json(aUsuario(r.rows[0]));
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al consultar tus datos' });
   }
 });
@@ -67,7 +68,7 @@ router.patch('/yo', exigirToken, async (req, res) => {
     res.json(aUsuario(r.rows[0]));
   } catch (e) {
     if (e.code === '23505') return res.status(409).json({ error: 'Ese telefono ya esta registrado' });
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al editar tus datos' });
   }
 });
@@ -93,14 +94,14 @@ router.post('/yo/foto', exigirToken, prepararFoto, express.raw({ type: TIPOS_ENT
     img = await normalizarAWebp(req.body, PERFIL);
   } catch (e) {
     if (e instanceof ErrorImagen) return res.status(e.status).json({ error: e.message });
-    console.error(e.message);
+    registrarError(e);
     return res.status(500).json({ error: 'Error al procesar la imagen' });
   }
   const ruta = `perfiles/${req.usuario.id}/${crypto.randomUUID()}.webp`;
   try {
     await subirWebp(img.buffer, ruta);
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     return res.status(502).json({ error: 'No se pudo guardar la imagen en el almacenamiento' });
   }
   try {
@@ -114,7 +115,7 @@ router.post('/yo/foto', exigirToken, prepararFoto, express.raw({ type: TIPOS_ENT
     res.json({ ...aUsuario(r.rows[0]), formato: 'webp', ancho: img.ancho, alto: img.alto, bytes: img.bytes, calidad: img.calidad });
   } catch (e) {
     await borrarReferencias([ruta]); // no dejar el archivo huerfano si la base fallo
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al guardar la foto de perfil' });
   }
 });
@@ -131,7 +132,7 @@ router.delete('/yo', exigirToken, async (req, res) => {
     res.status(204).end();
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {});
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al darte de baja' });
   } finally {
     client.release();
@@ -146,7 +147,7 @@ router.get('/:id', async (req, res) => {
     if (r.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json(aUsuario(r.rows[0]));
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al consultar el usuario' });
   }
 });

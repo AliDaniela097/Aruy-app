@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
+const { registrarError } = require('../registro');
 const { exigirToken, exigirRol } = require('../middleware/auth');
 const { esUuid } = require('../validar');
 
@@ -40,7 +41,7 @@ router.get('/mia', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
     if (r.rows.length === 0) return res.status(404).json({ error: 'Todavia no tienes suscripciones' });
     res.json(aSuscripcion(r.rows[0]));
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al consultar tu suscripcion' });
   }
 });
@@ -82,7 +83,7 @@ router.post('/', exigirToken, exigirRol('PRESTADOR'), async (req, res) => {
     await client.query('ROLLBACK').catch(() => {});
     // Dos peticiones al mismo tiempo: el indice unico de la base frena a la segunda
     if (e.code === '23505') return res.status(409).json({ error: 'Ya tienes una suscripcion pendiente o activa' });
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al crear la suscripcion' });
   } finally {
     client.release();
@@ -113,7 +114,7 @@ router.patch('/:id/cancelar', exigirToken, exigirRol('PRESTADOR'), async (req, r
     );
     res.json(aSuscripcion(r.rows[0]));
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al cancelar la suscripcion' });
   }
 });
