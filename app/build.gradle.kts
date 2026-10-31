@@ -13,6 +13,12 @@ val propiedadesLocales = Properties().apply {
     if (archivo.exists()) archivo.inputStream().use { load(it) }
 }
 
+// keystore.properties tampoco se sube: guarda la llave de firma del release (ver keystore.properties.example)
+val propiedadesFirma = Properties().apply {
+    val archivo = rootProject.file("keystore.properties")
+    if (archivo.exists()) archivo.inputStream().use { load(it) }
+}
+
 android {
     // Bloqueamos a la API 36 definida para el curso
     namespace = "ec.edu.puce.aruy"
@@ -24,9 +30,20 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            if (propiedadesFirma.isNotEmpty()) {
+                storeFile = rootProject.file(propiedadesFirma.getProperty("storeFile"))
+                storePassword = propiedadesFirma.getProperty("storePassword")
+                keyAlias = propiedadesFirma.getProperty("keyAlias")
+                keyPassword = propiedadesFirma.getProperty("keyPassword")
+            }
+        }
     }
 
     // Dónde corre el backend: en el emulador o en un celular físico de la misma red
@@ -43,10 +60,17 @@ android {
             val urlCelular = propiedadesLocales.getProperty("aruy.baseUrl") ?: "http://192.168.0.10:3000/"
             buildConfigField("String", "BASE_URL", "\"$urlCelular\"")
         }
+        create("produccion") {
+            dimension = "entorno"
+            // En local.properties: aruy.prodUrl=https://tu-backend.onrender.com/ (HTTPS obligatorio)
+            val urlProduccion = propiedadesLocales.getProperty("aruy.prodUrl") ?: ""
+            buildConfigField("String", "BASE_URL", "\"$urlProduccion\"")
+        }
     }
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -110,4 +134,17 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+// Evita subir a Play un AAB sin backend https o sin llave de firma
+gradle.taskGraph.whenReady {
+    if (hasTask(":app:bundleProduccionRelease")) {
+        val url = propiedadesLocales.getProperty("aruy.prodUrl") ?: ""
+        if (!url.startsWith("https://")) {
+            throw GradleException("Define aruy.prodUrl=https://... en local.properties antes de generar el AAB")
+        }
+        if (propiedadesFirma.isEmpty()) {
+            throw GradleException("Falta keystore.properties en la raiz del proyecto (ver keystore.properties.example)")
+        }
+    }
 }

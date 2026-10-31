@@ -17,8 +17,9 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Catálogo del contratante: junta los servicios con los datos públicos de sus prestadores.
- * Los datos del prestador vienen de `GET /perfiles` (pendiente en el backend); si ese endpoint
- * falla, el catálogo sigue funcionando y los servicios salen sin nombre ni calificación.
+ * Los datos del prestador vienen de `GET /perfiles`; si ese endpoint no existe se piden uno a uno
+ * con `GET /perfiles/{id}`. Si también falla, el catálogo sigue funcionando y los servicios
+ * salen sin nombre ni calificación.
  */
 class CatalogoRepository(
     private val servicioApi: ServicioApi,
@@ -29,13 +30,16 @@ class CatalogoRepository(
     private val fotosEnMemoria = ConcurrentHashMap<String, List<FotoPortafolio>>()
 
     suspend fun cargarCatalogo(): List<ServicioConPrestador> = coroutineScope {
-        val servicios = async { servicioApi.obtenerServicios().map { it.toDomain() } }
-        val prestadores = async { intentar { perfilApi.listar().map { it.toDomain() } }.orEmpty() }
-        val porId = prestadores.await().associateBy { it.id }
-        servicios.await().map { ServicioConPrestador(it, porId[it.prestadorId]) }
+        val servicios = servicioApi.obtenerServicios().map { it.toDomain() }
+        val prestadores = intentar { perfilApi.listar().map { it.toDomain() } }
+            ?: servicios.map { it.prestadorId }.distinct()
+                .map { id -> async { prestador(id) } }
+                .mapNotNull { it.await() }
+        val porId = prestadores.associateBy { it.id }
+        servicios.map { ServicioConPrestador(it, porId[it.prestadorId]) }
     }
 
-    /** null si el backend aún no tiene el endpoint público de perfiles. */
+    /** null si el prestador no existe o el servidor no responde. */
     suspend fun prestador(perfilId: String): PrestadorPublico? =
         intentar { perfilApi.obtener(perfilId).toDomain() }
 
