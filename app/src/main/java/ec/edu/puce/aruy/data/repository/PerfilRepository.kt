@@ -43,8 +43,8 @@ class PerfilRepository(
     suspend fun actualizarMiPerfil(datos: DatosPerfilPrestador): PerfilPrestador =
         prestadorApi.editarMiPerfil(PrestadorRepository.comoJson(cuerpoDePerfil(datos))).toPerfil()
 
-    /** La cuenta queda con `activo = false`; el servidor no borra nada. */
-    suspend fun darDeBaja() = usuarioApi.darmeDeBaja()
+    /** El servidor borra la cuenta y todos sus datos (servicios, fotos, opiniones y suscripción). */
+    suspend fun eliminarCuenta() = usuarioApi.eliminarMiCuenta()
 
     private fun PerfilPropioDto.toPerfil() = PerfilPrestador(
         id = id,

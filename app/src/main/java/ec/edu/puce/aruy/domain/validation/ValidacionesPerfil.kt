@@ -32,7 +32,7 @@ object ValidacionesPerfil {
     }
 
     /** La confirmación para darse de baja se escribe a mano para evitar toques por error. */
-    const val PALABRA_BAJA = "BAJA"
+    const val PALABRA_BAJA = "ELIMINAR"
 
     fun confirmaBaja(texto: String): Boolean = texto.trim().equals(PALABRA_BAJA, ignoreCase = true)
 }

@@ -589,12 +589,13 @@ paths['/usuarios/yo'] = {
   },
   delete: {
     tags: ['Usuarios'],
-    summary: 'Darme de baja',
+    summary: 'Eliminar mi cuenta',
     description:
-      'No se borra el usuario (la base lo impide si tiene perfil o calificaciones y así se conserva el historial): se marca `activo = false`, ' +
-      'su perfil queda no disponible y ya no puede iniciar sesión. Su token actual sigue siendo válido hasta que venza (8 horas).',
+      'Borra de verdad la cuenta y sus datos: usuario, perfil de prestador, servicios con sus fotos y etiquetas, ' +
+      'calificaciones (las que hizo y las que recibió) y suscripciones. Los archivos de las fotos se borran de Supabase. ' +
+      'No se puede deshacer. Su token deja de servir en cuanto la cuenta ya no existe.',
     security: conToken,
-    responses: { 204: sinContenido('Baja realizada'), 401: e401 },
+    responses: { 204: sinContenido('Cuenta eliminada'), 401: e401 },
   },
 };
 
@@ -934,7 +935,7 @@ paths['/perfiles/{id}'] = {
     description:
       'Público (no pide token). El `id` es el `prestador_id` de los servicios, es decir, el id del **perfil**. ' +
       'Devuelve nombre, teléfono, número listo para WhatsApp (`https://wa.me/{whatsapp}`), foto y calificación promedio. ' +
-      'Si el prestador se dio de baja, responde 404.',
+      'Si el prestador eliminó su cuenta, responde 404.',
     parameters: [idPath('Id del perfil del prestador (prestador_id de un servicio)')],
     responses: {
       200: { description: 'Perfil del prestador', content: json(ref('PerfilPublico')) },

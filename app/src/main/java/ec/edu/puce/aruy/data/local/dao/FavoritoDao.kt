@@ -25,6 +25,9 @@ interface FavoritoDao {
 
     @Query("DELETE FROM favoritos WHERE usuarioId = :usuarioId AND servicioId = :servicioId")
     suspend fun eliminarFavorito(usuarioId: String, servicioId: String)
+
+    @Query("DELETE FROM favoritos WHERE usuarioId = :usuarioId")
+    suspend fun borrarTodo(usuarioId: String)
 }
 
 @Dao
@@ -38,6 +41,9 @@ interface BloqueadoDao {
 
     @Query("SELECT * FROM bloqueados WHERE usuarioId = :usuarioId ORDER BY fecha DESC")
     fun observar(usuarioId: String): Flow<List<BloqueadoEntity>>
+
+    @Query("DELETE FROM bloqueados WHERE usuarioId = :usuarioId")
+    suspend fun borrarTodo(usuarioId: String)
 }
 
 @Dao
@@ -61,6 +67,9 @@ interface ReporteDao {
 
     @Query("SELECT * FROM reportes WHERE usuarioId = :usuarioId ORDER BY fecha DESC")
     fun observar(usuarioId: String): Flow<List<ReporteEntity>>
+
+    @Query("DELETE FROM reportes WHERE usuarioId = :usuarioId")
+    suspend fun borrarTodo(usuarioId: String)
 }
 
 @Dao
@@ -71,4 +80,7 @@ interface VistoDao {
 
     @Query("SELECT * FROM vistos WHERE usuarioId = :usuarioId ORDER BY fecha DESC LIMIT :limite")
     fun observar(usuarioId: String, limite: Int): Flow<List<VistoEntity>>
+
+    @Query("DELETE FROM vistos WHERE usuarioId = :usuarioId")
+    suspend fun borrarTodo(usuarioId: String)
 }

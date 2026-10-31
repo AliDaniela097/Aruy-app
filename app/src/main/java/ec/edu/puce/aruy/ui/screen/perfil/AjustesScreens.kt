@@ -183,7 +183,7 @@ fun PrivacidadScreen(onVolver: () -> Unit, onPermisos: () -> Unit, onBaja: () ->
             )
             Dato("Tu ubicación", "Aruy no la usa ni la guarda.")
             BotonContorno("Revisar permisos", onPermisos, ancho = true)
-            BotonPeligro("Dar de baja mi cuenta", onBaja, soloTexto = true)
+            BotonPeligro("Eliminar mi cuenta", onBaja, soloTexto = true)
         }
     }
 }

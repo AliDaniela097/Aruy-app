@@ -71,9 +71,9 @@ class PerfilYProTest {
 
     @Test
     fun la_baja_se_confirma_escribiendo_la_palabra() {
-        assertTrue(ValidacionesPerfil.confirmaBaja("baja"))
-        assertTrue(ValidacionesPerfil.confirmaBaja("  BAJA "))
-        assertFalse(ValidacionesPerfil.confirmaBaja("ELIMINAR"))
+        assertTrue(ValidacionesPerfil.confirmaBaja("eliminar"))
+        assertTrue(ValidacionesPerfil.confirmaBaja("  ELIMINAR "))
+        assertFalse(ValidacionesPerfil.confirmaBaja("BAJA"))
         assertFalse(ValidacionesPerfil.confirmaBaja(""))
     }
 }

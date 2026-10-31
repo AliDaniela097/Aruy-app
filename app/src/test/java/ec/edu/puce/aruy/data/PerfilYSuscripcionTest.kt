@@ -99,10 +99,10 @@ class PerfilYSuscripcionTest {
     }
 
     @Test
-    fun darse_de_baja_acepta_la_respuesta_204() = runBlocking {
+    fun eliminar_la_cuenta_acepta_la_respuesta_204() = runBlocking {
         servidor.enqueue(MockResponse().setResponseCode(204))
 
-        perfiles.darDeBaja()
+        perfiles.eliminarCuenta()
 
         val peticion = servidor.takeRequest()
         assertEquals("DELETE", peticion.method)

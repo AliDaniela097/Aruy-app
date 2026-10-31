@@ -22,10 +22,7 @@ interface UsuarioApi {
     @PATCH("usuarios/yo")
     suspend fun editarMiUsuario(@Body cuerpo: EditarUsuarioRequest): UsuarioDto
 
-    /**
-     * Darme de baja: la cuenta queda con `activo = false` y mi perfil de prestador como no disponible.
-     * No se borra nada (la base no lo permite si hay servicios u opiniones).
-     */
+    /** Eliminar mi cuenta: el servidor borra la cuenta, el perfil, los servicios, las fotos y las opiniones. */
     @DELETE("usuarios/yo")
-    suspend fun darmeDeBaja()
+    suspend fun eliminarMiCuenta()
 }

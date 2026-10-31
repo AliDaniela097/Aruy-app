@@ -110,7 +110,7 @@ fun PerfilScreen(
 
         TituloGrupo("Sesión")
         FilaAjuste(Icons.AutoMirrored.Filled.Logout, "Cerrar sesión", { confirmarSalida = true })
-        FilaAjuste(Icons.Filled.DeleteForever, "Dar de baja mi cuenta", onBaja, texto = "Desactiva tu cuenta", peligro = true)
+        FilaAjuste(Icons.Filled.DeleteForever, "Eliminar mi cuenta", onBaja, texto = "Borra tu cuenta y tus datos", peligro = true)
 
         Text(
             "Aruy ${BuildConfig.VERSION_NAME}",

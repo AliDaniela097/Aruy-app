@@ -29,6 +29,8 @@ class FavoritoRepository(
     suspend fun eliminarFavorito(usuarioId: String, servicioId: String) {
         favoritoDao.eliminarFavorito(usuarioId, servicioId)
     }
+
+    suspend fun borrarTodos(usuarioId: String) = favoritoDao.borrarTodo(usuarioId)
 }
 
 /**
@@ -64,4 +66,12 @@ class ActividadLocalRepository(
 
     suspend fun registrarVisto(usuarioId: String, servicioId: String) =
         vistoDao.registrar(VistoEntity(usuarioId, servicioId))
+
+    /** Al eliminar la cuenta no queda nada suyo en el teléfono. */
+    suspend fun borrarTodo(usuarioId: String) {
+        bloqueadoDao.borrarTodo(usuarioId)
+        contactoDao.borrarTodo(usuarioId)
+        reporteDao.borrarTodo(usuarioId)
+        vistoDao.borrarTodo(usuarioId)
+    }
 }
