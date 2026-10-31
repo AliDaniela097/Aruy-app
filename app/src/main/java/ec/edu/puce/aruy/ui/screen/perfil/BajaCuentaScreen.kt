@@ -28,15 +28,15 @@ import ec.edu.puce.aruy.ui.components.TipoTarjeta
 import ec.edu.puce.aruy.ui.viewmodel.BajaCuentaViewModel
 
 /**
- * Darse de baja. El backend no borra la cuenta (la base lo impide si hay servicios u opiniones): la deja
- * inactiva. La pantalla lo dice tal cual, sin prometer que se borren los datos.
+ * Eliminar la cuenta. El backend borra la cuenta y todos sus datos (Google Play no acepta solo
+ * desactivarla) y la app borra lo que guardaba de esa cuenta en el teléfono.
  */
 @Composable
 fun BajaCuentaScreen(viewModel: BajaCuentaViewModel, onVolver: () -> Unit) {
     val ui by viewModel.ui.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
-        BarraSuperior("Dar de baja mi cuenta", onVolver)
+        BarraSuperior("Eliminar mi cuenta", onVolver)
         Column(
             Modifier
                 .weight(1f)
@@ -46,19 +46,19 @@ fun BajaCuentaScreen(viewModel: BajaCuentaViewModel, onVolver: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             AruyTarjeta(tipo = TipoTarjeta.ERROR, modifier = Modifier.fillMaxWidth()) {
-                Text("Esto desactiva tu cuenta", style = MaterialTheme.typography.titleMedium)
-                Text("No se puede deshacer desde la app.", style = MaterialTheme.typography.bodyMedium)
+                Text("Esto elimina tu cuenta para siempre", style = MaterialTheme.typography.titleMedium)
+                Text("No se puede deshacer.", style = MaterialTheme.typography.bodyMedium)
             }
             AruyTarjeta(modifier = Modifier.fillMaxWidth()) {
-                Text("Qué pasa", style = MaterialTheme.typography.titleMedium)
-                Text("• No podrás volver a iniciar sesión con esta cuenta.", style = MaterialTheme.typography.bodyMedium)
-                Text("• Si eres prestador, tu perfil queda como no disponible.", style = MaterialTheme.typography.bodyMedium)
+                Text("Qué se borra", style = MaterialTheme.typography.titleMedium)
+                Text("• Tu cuenta: nombre, celular, correo y contraseña.", style = MaterialTheme.typography.bodyMedium)
+                Text("• Si eres prestador: tu perfil, tus servicios y sus fotos.", style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    "• Tus servicios, fotos y opiniones no se borran del servidor.",
+                    "• Las opiniones que hiciste y las que recibiste, y tu plan Aruy Pro.",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    "• Tus favoritos y tu historial siguen guardados en este teléfono.",
+                    "• Tus favoritos, bloqueados, reportes e historial guardados en este teléfono.",
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -68,11 +68,11 @@ fun BajaCuentaScreen(viewModel: BajaCuentaViewModel, onVolver: () -> Unit) {
                 etiqueta = "Para confirmar, escribe ${ValidacionesPerfil.PALABRA_BAJA}",
                 error = ui.error,
                 teclado = KeyboardOptions(imeAction = ImeAction.Done),
-                acciones = KeyboardActions(onDone = { viewModel.darDeBaja() })
+                acciones = KeyboardActions(onDone = { viewModel.eliminarCuenta() })
             )
             BotonPeligro(
-                texto = if (ui.procesando) "Dando de baja…" else "Dar de baja mi cuenta",
-                onClick = viewModel::darDeBaja,
+                texto = if (ui.procesando) "Eliminando…" else "Eliminar mi cuenta",
+                onClick = viewModel::eliminarCuenta,
                 ancho = true,
                 cargando = ui.procesando
             )

@@ -80,7 +80,13 @@ class AppContainer(contexto: Context) {
     val editarPerfilViewModelFactory: ViewModelProvider.Factory =
         fabricaVm { EditarPerfilViewModel(perfilRepository, sesionManager) }
     val bajaCuentaViewModelFactory: ViewModelProvider.Factory =
-        fabricaVm { BajaCuentaViewModel(perfilRepository, sesionManager) }
+        fabricaVm {
+            BajaCuentaViewModel(perfilRepository, sesionManager) { usuarioId ->
+                favoritoRepository.borrarTodos(usuarioId)
+                actividadLocalRepository.borrarTodo(usuarioId)
+                borradorStore.borrar(usuarioId)
+            }
+        }
     val aruyProViewModelFactory: ViewModelProvider.Factory = fabricaVm { AruyProViewModel(suscripcionRepository) }
     val ajustesViewModelFactory: ViewModelProvider.Factory = fabricaVm { AjustesViewModel(preferencias) }
 

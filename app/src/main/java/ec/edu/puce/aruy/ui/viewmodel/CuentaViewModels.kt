@@ -10,6 +10,7 @@ import ec.edu.puce.aruy.data.repository.DatosPerfilPrestador
 import ec.edu.puce.aruy.data.repository.PerfilRepository
 import ec.edu.puce.aruy.data.repository.SuscripcionRepository
 import ec.edu.puce.aruy.data.sesion.SesionManager
+import ec.edu.puce.aruy.domain.model.EstadoSesion
 import ec.edu.puce.aruy.domain.model.RolUsuario
 import ec.edu.puce.aruy.domain.model.Suscripcion
 import ec.edu.puce.aruy.domain.model.TipoPlan
@@ -136,14 +137,18 @@ class EditarPerfilViewModel(
     }
 }
 
-// ---------------------------------------------------------------- Dar de baja
+// ---------------------------------------------------------------- Eliminar la cuenta
 
 data class BajaUi(val confirmacion: String = "", val error: String? = null, val procesando: Boolean = false)
 
-/** Darse de baja: la cuenta queda inactiva en el servidor y se cierra la sesión en este teléfono. */
+/**
+ * Eliminar la cuenta: el servidor borra todos sus datos, se borra lo guardado en este teléfono
+ * para esa cuenta y se cierra la sesión.
+ */
 class BajaCuentaViewModel(
     private val repositorio: PerfilRepository,
-    private val sesion: SesionManager
+    private val sesion: SesionManager,
+    private val borrarDatosLocales: suspend (usuarioId: String) -> Unit
 ) : ViewModel() {
 
     private val _ui = MutableStateFlow(BajaUi())
@@ -151,7 +156,7 @@ class BajaCuentaViewModel(
 
     fun cambiarConfirmacion(v: String) = _ui.update { it.copy(confirmacion = v, error = null) }
 
-    fun darDeBaja() {
+    fun eliminarCuenta() {
         val actual = _ui.value
         if (actual.procesando) return
         if (!ValidacionesPerfil.confirmaBaja(actual.confirmacion)) {
@@ -161,7 +166,9 @@ class BajaCuentaViewModel(
         _ui.update { it.copy(procesando = true, error = null) }
         viewModelScope.launch {
             try {
-                repositorio.darDeBaja()
+                val usuarioId = (sesion.estado.value as? EstadoSesion.Autenticada)?.sesion?.usuario?.id
+                repositorio.eliminarCuenta()
+                if (usuarioId != null) borrarDatosLocales(usuarioId)
                 // Cerrar la sesión lleva solo a la bienvenida (AruyApp observa el estado)
                 sesion.cerrar()
             } catch (e: CancellationException) {

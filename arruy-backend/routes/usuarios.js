@@ -120,20 +120,36 @@ router.post('/yo/foto', exigirToken, prepararFoto, express.raw({ type: TIPOS_ENT
   }
 });
 
-// Darme de baja: NO se borra (la base lo impide si tengo perfil o calificaciones), se marca activo = false
+// Eliminar mi cuenta: se borran de verdad mis datos (Google Play no acepta solo desactivarla).
+// Orden por las llaves foraneas: calificaciones y suscripciones, servicios (sus fotos y etiquetas
+// caen por ON DELETE CASCADE), perfil y usuario. Los archivos de Supabase se borran despues del COMMIT.
 router.delete('/yo', exigirToken, async (req, res) => {
+  const yo = req.usuario.id;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await client.query('UPDATE usuarios SET activo = false WHERE id = $1', [req.usuario.id]);
-    // Si era prestador, su perfil deja de aparecer como disponible
-    await client.query('UPDATE perfiles_prestadores SET disponible = false WHERE usuario_id = $1', [req.usuario.id]);
+    const perfiles = (await client.query('SELECT id FROM perfiles_prestadores WHERE usuario_id = $1', [yo])).rows.map((p) => p.id);
+    const fotos = await client.query(
+      `SELECT f.referencia_imagen FROM fotos_portafolio f JOIN servicios s ON s.id = f.servicio_id
+       WHERE s.prestador_id = ANY($1::uuid[])`,
+      [perfiles]
+    );
+    const usuario = await client.query('SELECT foto_perfil FROM usuarios WHERE id = $1', [yo]);
+    await client.query(
+      'DELETE FROM calificaciones WHERE contratante_id = $1 OR perfil_prestador_id = ANY($2::uuid[])',
+      [yo, perfiles]
+    );
+    await client.query('DELETE FROM suscripciones WHERE prestador_id = ANY($1::uuid[])', [perfiles]);
+    await client.query('DELETE FROM servicios WHERE prestador_id = ANY($1::uuid[])', [perfiles]);
+    await client.query('DELETE FROM perfiles_prestadores WHERE usuario_id = $1', [yo]);
+    await client.query('DELETE FROM usuarios WHERE id = $1', [yo]);
     await client.query('COMMIT');
+    await borrarReferencias([...fotos.rows.map((f) => f.referencia_imagen), ...usuario.rows.map((u) => u.foto_perfil)]);
     res.status(204).end();
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {});
     registrarError(e);
-    res.status(500).json({ error: 'Error al darte de baja' });
+    res.status(500).json({ error: 'Error al eliminar tu cuenta' });
   } finally {
     client.release();
   }
