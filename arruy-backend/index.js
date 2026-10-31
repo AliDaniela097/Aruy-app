@@ -2,12 +2,16 @@ require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
+const { registrarError } = require('./registro');
 
 if (!process.env.JWT_SECRET) {
   throw new Error('Falta JWT_SECRET en el archivo .env');
 }
 
 const app = express();
+// Detras de un proxy (Render) todos llegan con la IP del proxy: se confia en 1 salto para ver la IP real.
+// Render define RENDER automaticamente; en otro proxy, definir TRUST_PROXY=1.
+if (process.env.RENDER || process.env.TRUST_PROXY) app.set('trust proxy', 1);
 app.use(helmet());
 app.use(express.json({ limit: '100kb' }));
 
@@ -78,7 +82,7 @@ app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
   if (err.type === 'entity.too.large') return res.status(413).json({ error: 'El cuerpo de la peticion es demasiado grande' });
   if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'El cuerpo no es un JSON valido' });
-  console.error(err.message);
+  registrarError(err);
   res.status(500).json({ error: 'Error interno del servidor' });
 });
 

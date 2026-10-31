@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
+const { registrarError } = require('../registro');
 const { exigirToken, exigirRol } = require('../middleware/auth');
 const { esUuid, textoValido } = require('../validar');
 
@@ -29,7 +30,7 @@ router.get('/', async (req, res) => {
       calificaciones: r.rows.map((x) => ({ ...x, id: String(x.id) })),
     });
   } catch (e) {
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al consultar las calificaciones' });
   }
 });
@@ -56,7 +57,7 @@ router.post('/', exigirToken, exigirRol('CONTRATANTE'), async (req, res) => {
     res.status(201).json({ ...r.rows[0], id: String(r.rows[0].id), perfil_prestador_id: String(r.rows[0].perfil_prestador_id) });
   } catch (e) {
     if (e.code === '23505') return res.status(409).json({ error: 'Ya calificaste a este prestador' });
-    console.error(e.message);
+    registrarError(e);
     res.status(500).json({ error: 'Error al guardar la calificacion' });
   }
 });
